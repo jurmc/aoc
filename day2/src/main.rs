@@ -1,4 +1,4 @@
-use std::fs;
+use day2::read_data;
 
 fn main() {
     let data = read_data("input.dat");
@@ -6,33 +6,6 @@ fn main() {
 
     let data = read_data("input.dat");
     println!("Solution 2 for day2: {}", solve2_day2(data));
-}
-
-fn not_empty(s: &str) -> bool {
-    for c in s.chars() {
-        match c {
-            ' ' => continue,
-            '\n' => continue,
-            '\t' => continue,
-            _ => return true,
-        }
-    }
-    return false;
-}
-
-fn read_data(file_name: &str) -> Vec<Vec<String>> {
-    let file_content = fs::read_to_string(file_name).unwrap();
-    let mut v: Vec<Vec<String>> = Vec::new();
-    for line in file_content.lines() {
-        if not_empty(line) {
-            let mut record: Vec<String> = Vec::new();
-            for word in line.split_whitespace() {
-                record.push(String::from(word));
-            }
-            v.push(record);
-        }
-    }
-    v
 }
 
 fn solve1_day2(data: Vec<Vec<String>>) -> i64{
@@ -76,10 +49,6 @@ fn solve2_day2(data: Vec<Vec<String>>) -> i64{
         }
     }
 
-    println!("acc_aim: {}", acc_aim);
-    println!("acc_forward: {}", acc_forward);
-    println!("acc_depth: {}", acc_depth);
-
     acc_forward * acc_depth
 }
 
@@ -96,5 +65,7 @@ fn check_input_star1() {
 fn check_input_star2() {
     let data = read_data("test-input.dat");
     assert_eq!(900, solve2_day2(data));
-    assert_eq!(1, 0);
+
+    let data = read_data("input.dat");
+    assert_eq!(1698850445, solve2_day2(data));
 }

@@ -1,4 +1,4 @@
-use std::fs;
+use day1::read_file_into_vec;
 
 //Window2Elements///////////////////////////////////////////////
 struct Window2Elements {
@@ -69,29 +69,6 @@ fn main() {
     let v = read_file_into_vec("input.dat");
     let w = TwoWindows3Elements::new(v);
     println!("Answer for star2 is: {}", count_larger_measurments_for_star2(w));
-}
-
-fn not_empty(s: &str) -> bool {
-    for c in s.chars() {
-        match c {
-            ' ' => continue,
-            '\n' => continue,
-            '\t' => continue,
-            _ => return true,
-        }
-    }
-    return false;
-}
-
-fn read_file_into_vec(file_name: &str) -> Vec<u32> {
-    let file_content = fs::read_to_string(file_name).unwrap();
-    let mut v: Vec<u32> = Vec::new();
-    for line in file_content.lines() {
-        if not_empty(line) {
-            v.push(line.parse::<u32>().unwrap());
-        }
-    }
-    v
 }
 
 fn count_larger_measurments_for_star1(w: Window2Elements) -> u32 {
