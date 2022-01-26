@@ -118,8 +118,7 @@ fn count_larger_measurments_for_star2(w: TwoWindows3Elements) -> u32 {
 }
 
 #[test]
-fn check_input_star1()
-{
+fn check_input_star1() {
     let v = read_file_into_vec("test-input.dat");
     let w = Window2Elements::new(v);
     assert_eq!(7, count_larger_measurments_for_star1(w));
@@ -130,8 +129,7 @@ fn check_input_star1()
 }
 
 #[test]
-fn check_input_star2()
-{
+fn check_input_star2() {
     let v = read_file_into_vec("test-input.dat");
     let w = TwoWindows3Elements::new(v);
     assert_eq!(5, count_larger_measurments_for_star2(w));
