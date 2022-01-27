@@ -12,12 +12,23 @@ pub fn not_empty(s: &str) -> bool {
     return false;
 }
 
-pub fn read_file_into_vec(file_name: &str) -> Vec<u32> {
+pub fn read_file_into_vec_u32(file_name: &str) -> Vec<u32> {
     let file_content = fs::read_to_string(file_name).unwrap();
     let mut v: Vec<u32> = Vec::new();
     for line in file_content.lines() {
         if not_empty(line) {
             v.push(line.parse::<u32>().unwrap());
+        }
+    }
+    v
+}
+
+pub fn read_file_into_vec_string(file_name: &str) -> Vec<String> {
+    let file_content = fs::read_to_string(file_name).unwrap();
+    let mut v: Vec<String> = Vec::new();
+    for line in file_content.lines() {
+        if not_empty(line) {
+            v.push(String::from(line));
         }
     }
     v

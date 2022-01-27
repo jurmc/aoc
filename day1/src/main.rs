@@ -1,4 +1,4 @@
-use day1::read_file_into_vec;
+use day1::read_file_into_vec_u32;
 
 //Window2Elements///////////////////////////////////////////////
 struct Window2Elements {
@@ -62,11 +62,11 @@ impl Iterator for TwoWindows3Elements {
 }
 
 fn main() {
-    let v = read_file_into_vec("input.dat");
+    let v = read_file_into_vec_u32("input.dat");
     let w = Window2Elements::new(v);
     println!("Answer for star1 is: {}", count_larger_measurments_for_star1(w));
 
-    let v = read_file_into_vec("input.dat");
+    let v = read_file_into_vec_u32("input.dat");
     let w = TwoWindows3Elements::new(v);
     println!("Answer for star2 is: {}", count_larger_measurments_for_star2(w));
 }
@@ -96,22 +96,22 @@ fn count_larger_measurments_for_star2(w: TwoWindows3Elements) -> u32 {
 
 #[test]
 fn check_input_star1() {
-    let v = read_file_into_vec("test-input.dat");
+    let v = read_file_into_vec_u32("test-input.dat");
     let w = Window2Elements::new(v);
     assert_eq!(7, count_larger_measurments_for_star1(w));
 
-    let v = read_file_into_vec("input.dat");
+    let v = read_file_into_vec_u32("input.dat");
     let w = Window2Elements::new(v);
     assert_eq!(1616, count_larger_measurments_for_star1(w));
 }
 
 #[test]
 fn check_input_star2() {
-    let v = read_file_into_vec("test-input.dat");
+    let v = read_file_into_vec_u32("test-input.dat");
     let w = TwoWindows3Elements::new(v);
     assert_eq!(5, count_larger_measurments_for_star2(w));
 
-    let v = read_file_into_vec("input.dat");
+    let v = read_file_into_vec_u32("input.dat");
     let w = TwoWindows3Elements::new(v);
     assert_eq!(1645, count_larger_measurments_for_star2(w));
 }
