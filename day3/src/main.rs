@@ -1,12 +1,11 @@
 use day3::read_file_into_vec_string;
 
-// TODO: eliminate usize, convert it ot u32 or something
 fn main() {
-    let data = read_file_into_vec_string("test-input.dat");
-    println!("Solution 1 for day3: {}", solve1_day3(data));
+    let data = read_file_into_vec_string("input.dat");
+    println!("Solution 2 for day3: {}", solve1_day3(data));
 
-    //let data = read_file_into_vec_string("input.dat");
-    //println!("Solution 2 for day3: {}", solve2_day3(data));
+    //let data = read_file_into_vec_string("test-input.dat");
+    //println!("Solution 1 for day3: {}", solve2_day3(data));
 }
 
 fn bin_to_dec(v: Vec<u32>) -> u32 {
@@ -18,8 +17,8 @@ fn bin_to_dec(v: Vec<u32>) -> u32 {
    acc
 }
 
-fn convert(v: Vec<String>) -> Vec<usize> {
-    let mut data: Vec<usize> = Vec::new();
+fn convert(v: Vec<String>) -> Vec<u32> {
+    let mut data: Vec<u32> = Vec::new();
     for record in v {
         if data.len() < record.len() {
             for _ in 0..record.len() {
@@ -28,15 +27,15 @@ fn convert(v: Vec<String>) -> Vec<usize> {
 
         }
         for (c, idx) in record.chars().zip(0..record.len()) {
-            data[idx] += String::from(c).parse::<usize>().unwrap();
+            data[idx] += String::from(c).parse::<u32>().unwrap();
         }
     }
     data
 }
 
 fn solve1_day3(v: Vec<String>) -> u32 {
-    let num_records = v.len();
-    let data = convert(v); 
+    let num_records = v.len() as u32;
+    let data = convert(v);
 
     let mut gamma: Vec<u32> = Vec::new();
     let mut epsilon: Vec<u32> = Vec::new();
@@ -56,6 +55,9 @@ fn solve1_day3(v: Vec<String>) -> u32 {
 
     gamma_dec * epsilon_dec
 }
+
+//fn solve2_day3(v: Vec<String>) -> u32 {
+//}
 
 #[test]
 fn check_solve1_day3() {
