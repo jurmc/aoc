@@ -1,4 +1,4 @@
-use day1::read_file_into_vec_u32;
+use input_lib::read_file_into_vec_u32;
 
 //Window2Elements///////////////////////////////////////////////
 struct Window2Elements {

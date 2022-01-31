@@ -1,4 +1,4 @@
-use day2::read_data;
+use input_lib::read_data;
 
 fn main() {
     let data = read_data("input.dat");

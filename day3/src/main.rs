@@ -1,4 +1,4 @@
-use day3::read_file_into_vec_string;
+use input_lib::read_file_into_vec_string;
 
 fn main() {
     let data = read_file_into_vec_string("input.dat");
