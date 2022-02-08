@@ -1,4 +1,5 @@
 use input_lib::read_file_into_vec_string;
+use input_lib::read_file_into_binary_matrix;
 
 fn main() {
     let data = read_file_into_vec_string("input.dat");
@@ -14,38 +15,11 @@ fn get_bit_for_oxygen(data: &Vec<Vec<bool>>, bit_idx: usize) -> bool{
                             .reduce(|acc, item| acc + item)
                             .unwrap();
 
-    let num_false_bits = num_records - num_true_bits;
     let bit_for_oxygen = {
         if 2 * num_true_bits >= num_records { true }
         else                                { false}
     };
     bit_for_oxygen
-}
-
-fn convert_into_bool_matrix(data: &Vec<String>) -> Vec<Vec<bool>> {
-    let mut converted_data: Vec<Vec<bool>> = Vec::new();
-    for record in data {
-        let new_rec: Vec<bool> = record.chars().map(|c| match c {
-            '1' => true,
-            '0' => false,
-            _ => panic!("Cannot happen"),
-        }).collect();
-        converted_data.push(new_rec);
-    }
-    converted_data
-}
-
-fn dump_data(data: &Vec<Vec<bool>>) {
-    for record in data {
-        for field in record {
-            print!("{} ", match field {
-                true => 1,
-                false => 0,
-            });
-        }
-        println!("");
-    }
-    println!("----------------");
 }
 
 fn bin_to_dec_better(v: &Vec<bool>) -> u32 {
@@ -108,17 +82,12 @@ fn solve1_day3(v: Vec<String>) -> u32 {
 
 fn solve2_day3(file: &str) -> i32 {
     // 1st half /////////////////////////////
-    let mut oxygen_generator_rating: i32 = 0;
-    let mut co2_scrubber_rating: i32 = 0;
+    let oxygen_generator_rating: i32;
 
     {
-        let data = read_file_into_vec_string(file);
-        let mut data = convert_into_bool_matrix(&data);
+        let mut data = read_file_into_binary_matrix(file);
         let num_fields = data.iter().next().unwrap().len() as i32;
 
-        let bit_idx_tmp = 0 as usize;
-
-        dump_data(&data);
         for bit_idx in 0..num_fields {
             let bit_for_oxygen = get_bit_for_oxygen(&data, bit_idx as usize);
             data = data.into_iter()
@@ -129,35 +98,28 @@ fn solve2_day3(file: &str) -> i32 {
             }
         }
         assert_eq!(1, data.len());
-        dump_data(&data);
         oxygen_generator_rating = bin_to_dec_better(data.iter().next().unwrap()) as i32;
-        println!("bin_to_dec_better: {}", oxygen_generator_rating);
     }
 
     // 2nd half /////////////////////////////
-
+    let co2_scrubber_rating: i32;
     {
-        let data = read_file_into_vec_string(file);
-        let mut data = convert_into_bool_matrix(&data);
+        //let data = read_file_into_vec_string(file);
+        //let mut data = convert_into_bool_matrix(&data);
+        let mut data = read_file_into_binary_matrix(file);
         let num_fields = data.iter().next().unwrap().len() as i32;
 
-        let bit_idx_tmp = 0 as usize;
-
-        dump_data(&data);
         for bit_idx in 0..num_fields {
             let bit_for_co2 =  !get_bit_for_oxygen(&data, bit_idx as usize);
             data = data.into_iter()
                 .filter(|record| record[bit_idx as usize] == bit_for_co2)
                 .collect::<Vec<_>>();
-            //dump_data(&data);
             if data.len() == 1 {
                 break;
             }
         }
         assert_eq!(1, data.len());
-        dump_data(&data);
         co2_scrubber_rating = bin_to_dec_better(data.iter().next().unwrap()) as i32;
-        println!("bin_to_dec_better: {}", co2_scrubber_rating);
     }
 
     oxygen_generator_rating * co2_scrubber_rating
