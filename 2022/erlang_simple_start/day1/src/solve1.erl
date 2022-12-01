@@ -20,6 +20,9 @@ input_into_list(<<>>, Acc) ->
                                (<<Bytes/binary>>) -> reverse(Bytes) end,
                             Acc));
 
+%%process_item([], {CurrentElve, [ProcessedElves]}) -> {0, [CurrentElve|ProcessedElves};
+%%process_item(Item, {CurrentElve, [ProcessedElves]}) -> {Item+CurrentElve, ProcessedElves}.
+
 input_into_list(<<F,R/binary>>, Acc) when F == 10 ->
     input_into_list(R, [[]|Acc]);
 input_into_list(<<F,R/binary>>, [[]|T]) ->
@@ -29,10 +32,14 @@ input_into_list(<<F,R/binary>>, [H|T]) ->
 input_into_list(<<F,R/binary>>, []) ->
     input_into_list(R, [<<F>>]).
 
+convert_to_int(InList) ->
+    lists:map(fun([]) -> [];
+                 (Item) -> {Int, _} = string:to_integer(binary_to_list(Item)), Int end,
+              [[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []]).
 
 solve_test() ->
     ?assertEqual([[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []], input_into_list(<<"\n\n123\n4567\n89\n">>)),
+    ?assertEqual([[], [], 123, [], 4567, [], 89, []], convert_to_int([[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []])),
     {ok, FileContent} = file:read_file("test_input_day1.txt"),
     input_into_list(FileContent).
-
 
