@@ -11,11 +11,11 @@
 %%
 
 part1(FileName) ->
-    {ok, FileContent} = file:read_file(os:getenv("AOC_INPUT") ++ "/" ++ FileName),
+    {ok, FileContent} = aoc_input_app:read_file(FileName),
     lists:max(get_sum_for_each_elve(FileContent)).
 
 part2(FileName) ->
-    {ok, FileContent} = file:read_file(os:getenv("AOC_INPUT") ++ "/" ++ FileName),
+    {ok, FileContent} = aoc_input_app:read_file(FileName),
     [First, Second, Third | _] = lists:reverse(lists:sort(get_sum_for_each_elve(FileContent))),
     lists:sum([First, Second, Third]).
 
