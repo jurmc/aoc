@@ -1,9 +1,10 @@
-aoc_erlang
+TODO:
 =====
 
-An OTP application
+1. aoc_input added as app, but this is only lib (I don't know how to add simple module to umbrella project).
 
-Build
+Execute
 -----
 
-    $ rebar3 compile
+    . env.sh
+    rebar3 eunit
