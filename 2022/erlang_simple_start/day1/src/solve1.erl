@@ -2,7 +2,23 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--export([input_into_list/1]).
+-export([input_into_list/1, solve_first_part/1, solve_second_part/1]).
+
+solve_first_part(FileName) ->
+    {ok, FileContent} = file:read_file(FileName),
+    InputList = input_into_list(FileContent),
+    ConvertedToInt = convert_to_int(InputList),
+    SumForEachElve = get_sum_for_each_elve(ConvertedToInt),
+    lists:max(SumForEachElve).
+
+solve_second_part(FileName) ->
+    {ok, FileContent} = file:read_file(FileName),
+    InputList = input_into_list(FileContent),
+    ConvertedToInt = convert_to_int(InputList),
+    SumForEachElve = get_sum_for_each_elve(ConvertedToInt),
+    SortedSum = lists:reverse(lists:sort(SumForEachElve)),
+    [First, Second, Third | _] = SortedSum,
+    lists:sum([First, Second, Third]).
 
 reverse(Bytes) ->
     reverse(Bytes, <<>>).
@@ -20,9 +36,6 @@ input_into_list(<<>>, Acc) ->
                                (<<Bytes/binary>>) -> reverse(Bytes) end,
                             Acc));
 
-%%process_item([], {CurrentElve, [ProcessedElves]}) -> {0, [CurrentElve|ProcessedElves};
-%%process_item(Item, {CurrentElve, [ProcessedElves]}) -> {Item+CurrentElve, ProcessedElves}.
-
 input_into_list(<<F,R/binary>>, Acc) when F == 10 ->
     input_into_list(R, [[]|Acc]);
 input_into_list(<<F,R/binary>>, [[]|T]) ->
@@ -35,11 +48,34 @@ input_into_list(<<F,R/binary>>, []) ->
 convert_to_int(InList) ->
     lists:map(fun([]) -> [];
                  (Item) -> {Int, _} = string:to_integer(binary_to_list(Item)), Int end,
-              [[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []]).
+              InList).
+
+get_sum_for_each_elve(InList) ->
+        lists:reverse(get_sum_for_each_elve(InList, [0])).
+
+get_sum_for_each_elve([], Acc) -> Acc;
+get_sum_for_each_elve([[],[]|T], Acc) -> get_sum_for_each_elve(T, [0|Acc]);
+get_sum_for_each_elve([[]|T], Acc) -> get_sum_for_each_elve(T, Acc);
+get_sum_for_each_elve([H|T], [AccH]) -> get_sum_for_each_elve(T, [H+AccH]);
+get_sum_for_each_elve([H|T], [AccH|AccT]) -> get_sum_for_each_elve(T, [H+AccH|AccT]).
 
 solve_test() ->
     ?assertEqual([[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []], input_into_list(<<"\n\n123\n4567\n89\n">>)),
     ?assertEqual([[], [], 123, [], 4567, [], 89, []], convert_to_int([[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []])),
     {ok, FileContent} = file:read_file("test_input_day1.txt"),
-    input_into_list(FileContent).
+    InputList = input_into_list(FileContent),
+    ConvertedToInt = convert_to_int(InputList),
+    ExpectedSumForEachElve = [6000, 4000, 11000, 24000, 10000],
+    SumForEachElve = get_sum_for_each_elve(ConvertedToInt),
+    ?assertEqual(ExpectedSumForEachElve, SumForEachElve),
+    ?assertEqual(24000, lists:max(SumForEachElve)). 
+
+    %% TODO: Add test
+    %% For my own input answer is: 74394
+
+solve2_test() ->
+    %% TODO: add tests for 2nd part (for test intput and for my own input).
+    %% Answer for test input is: sum([24000,11000,10000])
+    %% Answer for my own input is: sum([74394,69863,68579])
+    ?assertEqual(1, 0).
 
