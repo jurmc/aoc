@@ -9,13 +9,11 @@
 %%% Exported functions
 
 part1(FileName) ->
-    {ok, FileContent} = aoc_input_app:read_file(FileName),
-    InList = into_list(FileContent),
+    InList = aoc_input_app:read_file_lines_into_2_columns(FileName),
     lists:sum(lists:map(fun(Item) -> round_outcome(Item) end, InList)).
 
 part2(FileName) ->
-    {ok, FileContent} = aoc_input_app:read_file(FileName),
-    InList = requested_games(into_list(FileContent)),
+    InList = requested_games(aoc_input_app:read_file_lines_into_2_columns(FileName)),
     lists:sum(lists:map(fun(Item) -> round_outcome(Item) end, InList)).
 
 %%% Internal functions
@@ -59,16 +57,15 @@ requested_game({HisCode = "A", "Z"}) -> {HisCode, "B"};
 requested_game({HisCode = "B", "Z"}) -> {HisCode, "C"};
 requested_game({HisCode = "C", "Z"}) -> {HisCode, "A"}.
 
-requested_games(InList) ->
-    lists:map(fun requested_game/1, InList).
-
-%% TODO: move this into aoc_input lib
-into_list(FileContent) ->
-    Lines = string:tokens(erlang:binary_to_list(FileContent), "\n"),
-    lists:map(fun(Line) -> [I1, I2] = string:tokens(Line, " "), {I1, I2} end, Lines).
+requested_games(InList) -> lists:map(fun requested_game/1, InList).
 
 %%% Unit tests
 -ifdef(TEST).
+
+round_outcome_test() ->
+    ?assertEqual(8, round_outcome({"A", "Y"})),
+    ?assertEqual(1, round_outcome({"B", "X"})),
+    ?assertEqual(6, round_outcome({"C", "Z"})).
 
 requested_game_test() ->
     ?assertEqual({"A", "A"}, requested_game({"A", "Y"})),
@@ -85,11 +82,5 @@ part1_test() ->
 part2_test() ->
     ?assertEqual(lists:sum([4, 1, 7]), part2("test_input_day02.txt")),
     ?assertEqual(12989, part2("input_day02.txt")).
-
-round_outcome_test() ->
-    ?assertEqual(8, round_outcome({"A", "Y"})),
-    ?assertEqual(1, round_outcome({"B", "X"})),
-    ?assertEqual(6, round_outcome({"C", "Z"})).
-
 
 -endif.
