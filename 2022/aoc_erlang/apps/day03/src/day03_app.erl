@@ -56,7 +56,50 @@ sum_priorities_test() ->
 
     InList = aoc_input_app:read_file_lines("input_day03.txt"),
     Result = sum_priorities(InList),
-    ?debugFmt("Result: ~p", [Result]).
-    %%?assertEqual(157, Result).
+    ?debugFmt("Result: ~p", [Result]),
+    ?assertEqual(7716, Result).
 
+group_input(InList) ->
+    lists:reverse(group_input(InList, [])).
+
+group_input([], Acc) -> Acc;
+group_input([A,B,C|T], Acc) ->
+    group_input(T, [{A,B,C}|Acc]).
+
+
+group_input_test() ->
+    InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
+    ?assertEqual([{"vJrwpWtwJgWrhcsFMMfFFhFp", "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL", "PmmdzqPrVvPwwTWBwg"},
+                  {"wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn", "ttgJtRGJQctTZtZT", "CrZsJsPPZsGzwwsLwLmpwMDw"}],
+                 group_input(InList)).
+
+%% TODO: foldl candidate
+priority_for_group(Group) ->
+    {L1, L2, L3} = Group,
+    S1 = sets:from_list(L1),
+    S2 = sets:from_list(L2),
+    S3 = sets:from_list(L3),
+    S4 = sets:intersection(S1, S2),
+    S5 = sets:intersection(S3, S4),
+    item_to_priority(sets:to_list(S5)).
+
+common_char_for_group_test() ->
+    InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
+    Groups = group_input(InList),
+    ?assertEqual(18, priority_for_group(lists:nth(1, Groups))),
+    ?assertEqual(52, priority_for_group(lists:nth(2, Groups))).
+
+%% TODO: foldl candidate (also previous days can be revised)
+sum_priorities_for_part2(Groups) ->
+    lists:sum(lists:map(fun(Group) -> priority_for_group(Group) end, Groups)).
+
+sum_priorities_for_part2_test() ->
+    InListTest = aoc_input_app:read_file_lines("test_input_day03.txt"),
+    GroupsTest = group_input(InListTest),
+    ?assertEqual(70, sum_priorities_for_part2(GroupsTest)),
+
+    InList = aoc_input_app:read_file_lines("input_day03.txt"),
+    Groups = group_input(InList),
+    Result = sum_priorities_for_part2(Groups),
+    ?debugFmt("Result: ~p\n", [Result]).
 
