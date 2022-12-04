@@ -6,9 +6,7 @@
 
 -export([part1/1, part2/1]).
 
-%%
-%% Exported functions
-%%
+%%% Exported functions
 
 part1(FileName) ->
     {ok, FileContent} = aoc_input_app:read_file(FileName),
@@ -19,9 +17,7 @@ part2(FileName) ->
     [First, Second, Third | _] = lists:reverse(lists:sort(get_sum_for_each_elve(FileContent))),
     lists:sum([First, Second, Third]).
 
-%%
-%% Internal functions
-%%
+%%% Internal functions
 
 reverse(Bytes) ->
     reverse(Bytes, <<>>).
@@ -56,9 +52,7 @@ get_sum_for_each_elve([[]|T], Acc) -> get_sum_for_each_elve(T, Acc);
 get_sum_for_each_elve([H|T], [AccH]) -> get_sum_for_each_elve(T, [H+AccH]);
 get_sum_for_each_elve([H|T], [AccH|AccT]) -> get_sum_for_each_elve(T, [H+AccH|AccT]).
 
-%%
-%% Unit tests
-%%
+%%% Unit tests
 -ifdef(TEST).
 
 input_into_list_test() ->
