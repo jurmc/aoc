@@ -18,36 +18,26 @@ part2(FileName) ->
 
 %%% Internal functions
 
-%% TODO: from hardcoded sequences into +index = win, -index = loose
-into_shape("A") -> rock;
-into_shape("X") -> rock;
-into_shape("B") -> paper;
-into_shape("Y") -> paper;
-into_shape("C") -> scissors;
-into_shape("Z") -> scissors.
+ord("A") -> 1;
+ord("X") -> 1;
+ord("B") -> 2;
+ord("Y") -> 2;
+ord("C") -> 3;
+ord("Z") -> 3.
 
-round_outcome({HisCode, OwnCode}) ->
-    HisShape = into_shape(HisCode),
-    OwnShape = into_shape(OwnCode),
-    ResultPoints = result_points(result(HisShape, OwnShape)),
-    ShapePoints = shape_points(OwnShape),
-    ResultPoints + ShapePoints.
+round_outcome({His, Own}) ->
+    ResultPoints = result_points(result(ord(His), ord(Own))),
+    ResultPoints + ord(Own).
 
 result(TheSame, TheSame) -> draw;
-result(rock, paper) -> won;
-result(rock, scissors) -> lost;
-result(paper, scissors) -> won;
-result(paper, rock ) -> lost;
-result(scissors, rock ) -> won;
-result(scissors, paper ) -> lost.
+result(3, 1) -> won;
+result(1, 3) -> lost;
+result(His, Own) when His < Own -> won;
+result(_, _) -> lost.
 
 result_points(won) -> 6;
 result_points(draw) -> 3;
 result_points(lost) -> 0.
-
-shape_points(rock) -> 1;
-shape_points(paper) -> 2;
-shape_points(scissors) -> 3.
 
 requested_game({HisCode, "Y"}) -> {HisCode, HisCode};
 requested_game({HisCode = "A", "X"}) -> {HisCode, "C"};
