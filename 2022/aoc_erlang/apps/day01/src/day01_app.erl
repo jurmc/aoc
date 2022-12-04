@@ -31,7 +31,6 @@ input_into_list(<<>>, Acc) ->
     lists:reverse(lists:map(fun([]) -> [];
                                (<<Bytes/binary>>) -> reverse(Bytes) end,
                             Acc));
-
 input_into_list(<<F,R/binary>>, Acc) when F == 10 -> input_into_list(R, [[]|Acc]);
 input_into_list(<<F,R/binary>>, [[]|T]) -> input_into_list(R, [<<F>>,[]|T]);
 input_into_list(<<F,R/binary>>, [H|T]) -> input_into_list(R, [<<F,H/binary>>|T]);
