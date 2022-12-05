@@ -1,9 +1,5 @@
 -module(day01_app).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -export([part1/1, part2/1]).
 
 %%% Exported functions
@@ -53,6 +49,8 @@ get_sum_for_each_elve([H|T], [AccH|AccT]) -> get_sum_for_each_elve(T, [H+AccH|Ac
 
 %%% Unit tests
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
 
 input_into_list_test() ->
     ?assertEqual([[], [], <<"123">>, [], <<"4567">>, [], <<"89">>, []], input_into_list(<<"\n\n123\n4567\n89\n">>)).

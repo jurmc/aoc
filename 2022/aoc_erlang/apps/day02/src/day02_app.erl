@@ -1,9 +1,5 @@
 -module(day02_app).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -export([part1/1, part2/1]).
 
 %%% Exported functions
@@ -51,6 +47,7 @@ requested_games(InList) -> lists:map(fun requested_game/1, InList).
 
 %%% Unit tests
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 round_outcome_test() ->
     ?assertEqual(8, round_outcome({"A", "Y"})),
