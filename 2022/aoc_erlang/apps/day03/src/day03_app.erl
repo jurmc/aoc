@@ -10,15 +10,19 @@ part1(FileName) ->
 part2(FileName) ->
     InList = aoc_input_app:read_file_lines(FileName),
     Groups = group_input(InList),
-    sum_priorities_for_part2(Groups).
+    sum_priorities_for_groups(Groups).
 
 %%% Internal functions
 
 sum_priorities(InList) ->
-    lists:sum(priorites_list(InList)).
+    Priorities = lists:map(fun(Line) -> item_to_priority(shared_item(Line)) end, InList),
+    lists:sum(Priorities).
 
-priorites_list(InList) ->
-    lists:map(fun(Line) -> item_to_priority(shared_item(Line)) end, InList).
+split_in_half(String) ->
+    Len = string:length(String),
+    _AssumeLenIsEven = 0 = Len rem 2,
+    Pos = Len div 2,
+    [string:slice(String, 0, Pos), string:slice(String, Pos)].
 
 shared_item(String) ->
     [L1, L2] = split_in_half(String),
@@ -31,21 +35,13 @@ shared_item(String) ->
 item_to_priority(Char) when Char >= "a" -> hd(Char) - 96;
 item_to_priority(Char) -> hd(Char) - 38.
 
-split_in_half(String) ->
-    Len = string:length(String),
-    _AssumeLenIsEven = 0 = Len rem 2,
-    Pos = Len div 2,
-    [string:slice(String, 0, Pos), string:slice(String, Pos)].
-
-group_input(InList) ->
-    lists:reverse(group_input(InList, [])).
-
-group_input([], Acc) -> Acc;
+group_input(InList) -> group_input(InList, []).
+group_input([], Acc) -> lists:reverse(Acc);
 group_input([A,B,C|T], Acc) ->
     group_input(T, [{A,B,C}|Acc]).
 
 %% TODO: foldl candidate (also previous days can be revised)
-sum_priorities_for_part2(Groups) ->
+sum_priorities_for_groups(Groups) ->
     lists:sum(lists:map(fun(Group) -> priority_for_group(Group) end, Groups)).
 
 %% TODO: foldl candidate
@@ -78,11 +74,6 @@ item_to_priority_test() ->
     ?assertEqual(16, item_to_priority("p")),
     ?assertEqual(38, item_to_priority("L")),
     ?assertEqual(42, item_to_priority("P")).
-
-priorites_test() ->
-    InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
-    ?assertEqual([16, 38, 42, 22, 20, 19], priorites_list(InList)).
-
 
 group_input_test() ->
     InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
