@@ -50,11 +50,28 @@ find_empty_line_test() ->
     FileLines = aoc_input_app:read_file_lines2("test_input_day05.txt"),
     ?assertEqual(4, find_empty_line_idx(FileLines)).
 
+slice(ToSlice) ->
+    [SliceNotReversed, RestNotReversed] = lists:foldl(fun([H|T], [Col, Rest]) -> [[H|Col], [T|Rest]] end, [[],[]], ToSlice),
+    Out = [lists:reverse(SliceNotReversed), lists:reverse(RestNotReversed)],
+    Out.
+
+transpose(Lists) -> transpose(Lists, []).
+transpose(Lists, Acc) ->
+    [Col,RestLists] = slice(Lists),
+    case RestLists of
+        [[],[],[]] -> lists:reverse([Col|Acc]);
+        _ -> transpose(RestLists, [Col|Acc])
+    end.
+
 create_stacks(StacksLinesLists) ->
-    not_implemented.
+    TransposedLists = transpose(StacksLinesLists),
+    lists:map(fun(List) ->
+                      lists:flatten(lists:filter(fun(C) -> C =/= [] end, List))
+              end,
+             TransposedLists).
 
 create_stacks_test() ->
-    ?assertEqual(["NZ", "DCM", "P"], create_stacks([[[],"D",[]],["N","C",[]],["Z","M","P"]])).
+    ?assertEqual(["NZ", "DCM", "P"], create_stacks([[[],"D",[]],["N","C",[]],["Z","M","P"]])),
 
 read_input(FileName) ->
     FileLines = aoc_input_app:read_file_lines2(FileName),
@@ -68,16 +85,16 @@ read_input(FileName) ->
     %% TODO: fake implementation
     [["NZ", "DCM", "P"], [[1, 2, 1], [3, 1, 3], [2, 2, 1], [1, 1, 2]]].
 
-read_input_test() ->
-    [Stacks, Moves] = read_input("test_input_day05.txt"),
-    ExpectedStacks = [ "NZ", "DCM", "P" ],
-    ExpectedMoves = [
-                     [1, 2, 1],
-                     [3, 1, 3],
-                     [2, 2, 1],
-                     [1, 1, 2]
-                    ],
-    ?assertEqual(ExpectedStacks, Stacks),
-    ?assertEqual(ExpectedMoves, Moves).
+%%read_input_test() ->
+%%    [Stacks, Moves] = read_input("test_input_day05.txt"),
+%%    ExpectedStacks = [ "NZ", "DCM", "P" ],
+%%    ExpectedMoves = [
+%%                     [1, 2, 1],
+%%                     [3, 1, 3],
+%%                     [2, 2, 1],
+%%                     [1, 1, 2]
+%%                    ],
+%%    ?assertEqual(ExpectedStacks, Stacks),
+%%    ?assertEqual(ExpectedMoves, Moves).
 
 -endif.
