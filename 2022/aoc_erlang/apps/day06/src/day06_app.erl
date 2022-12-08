@@ -26,7 +26,6 @@ detect_marker(String, Length, Acc) ->
     end;
 detect_marker(_, _, _) -> not_implemented.
 
-
 %%% Unit tests
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -45,7 +44,6 @@ detect_marker_test() ->
     ?assertEqual(23, element(2, detect_marker("nppdvjthqldpwncqszvftbrmjlhg", Part2MarkerLen))),
     ?assertEqual(29, element(2, detect_marker("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg", Part2MarkerLen))),
     ?assertEqual(26, element(2, detect_marker("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", Part2MarkerLen))).
-
 
 part1_test() ->
     {Marker, Position} = part1("test_input_day06.txt"),
