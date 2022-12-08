@@ -28,6 +28,14 @@ extract_stack_line_test() ->
     ?assertEqual(["N", "C", ""],  extract_stack_line("[N] [C]    ")),
     ?assertEqual(["", "D", ""],   extract_stack_line("    [D]    ")).
 
+extract_move_line(Line) ->
+    [_, What, _, From, _, Where] = string:tokens(Line, " "),
+    lists:map(fun(Str) ->  {Int, _} = string:to_integer(Str), Int end, [What, From, Where]).
+
+extract_move_line_test() ->
+    ?assertEqual([1, 2, 1], extract_move_line("move 1 from 2 to 1")).
+
+
 find_empty_line_idx(Lines) -> find_empty_line_idx(Lines, 0).
 find_empty_line_idx([Line|RestLines], Acc) ->
     case string:is_empty(string:trim(Line)) of
@@ -74,13 +82,6 @@ create_stacks_test() ->
 %% move 1 from 1 to 2
 %%
 
-extract_move_line(Line) ->
-    [_, What, _, From, _, Where] = string:tokens(Line, " "),
-    lists:map(fun(Str) ->  {Int, _} = string:to_integer(Str), Int end, [Where, From, Where]).
-
-extract_move_line_test() ->
-    ?assertEqual([1, 2, 1], extract_move_line("move 1 from 2 to 1")).
-
 read_input(FileName) ->
     FileLines = aoc_input_app:read_file_lines2(FileName),
     EmptyLineIdx = find_empty_line_idx(FileLines),
@@ -97,7 +98,7 @@ read_input(FileName) ->
     Moves = lists:map(fun(Line) -> extract_move_line(Line) end, FilteredMoveLines),
 
     %% TODO: partially fake implementation
-    [Stacks, [[1, 2, 1], [3, 1, 3], [2, 2, 1], [1, 1, 2]]].
+    [Stacks, Moves].
 
 read_input_test() ->
     [Stacks, Moves] = read_input("test_input_day05.txt"),
