@@ -56,7 +56,9 @@ transpose(Lists) -> transpose(Lists, []).
 transpose(Lists, Acc) ->
     [Col,RestLists] = slice(Lists),
     case RestLists of
+        %% TODO: first two clauses are not generict!
         [[],[],[]] -> lists:reverse([Col|Acc]);
+        [[],[],[],[],[],[],[],[]] -> lists:reverse([Col|Acc]);
         _ -> transpose(RestLists, [Col|Acc])
     end.
 
@@ -69,18 +71,6 @@ create_stacks(StacksLinesLists) ->
 
 create_stacks_test() ->
     ?assertEqual(["NZ", "DCM", "P"], create_stacks([[[],"D",[]],["N","C",[]],["Z","M","P"]])).
-
-%%
-%%     [D]    
-%% [N] [C]    
-%% [Z] [M] [P]
-%%  1   2   3 
-%% 
-%% move 1 from 2 to 1
-%% move 3 from 1 to 3
-%% move 2 from 2 to 1
-%% move 1 from 1 to 2
-%%
 
 read_input(FileName) ->
     FileLines = aoc_input_app:read_file_lines2(FileName),
@@ -111,5 +101,63 @@ read_input_test() ->
                     ],
     ?assertEqual(ExpectedStacks, Stacks),
     ?assertEqual(ExpectedMoves, Moves).
+
+%%
+%%     [D]    
+%% [N] [C]    
+%% [Z] [M] [P]
+%%  1   2   3 
+%% 
+%% move 1 from 2 to 1
+%% move 3 from 1 to 3
+%% move 2 from 2 to 1
+%% move 1 from 1 to 2
+%%
+
+%% TODO: Where -> To
+apply_move(Stacks, [What, From, Where]) ->
+    Dict1 = orddict:from_list(lists:enumerate(Stacks)),
+
+    {InStack, _} = orddict:take(From, Dict1),
+    {OutStack, _} = orddict:take(Where, Dict1),
+
+    %% Update 'From' stack
+    {MovingPart, InStackUpdated} = lists:split(What, InStack),
+    Dict2 = orddict:store(From, InStackUpdated, Dict1),
+
+    %% Reverse what we move
+    MovingPartReversed = lists:reverse(MovingPart),
+
+    %% Update 'Where/To' stack
+    OutStackUpdated = MovingPartReversed ++ OutStack,
+    Dict3 = orddict:store(Where, OutStackUpdated, Dict2),
+
+    lists:map(fun({_Key, Val}) -> Val end, orddict:to_list(Dict3)).
+
+apply_move_test() ->
+    ?assertEqual([ "DNZ", "CM", "P" ], apply_move([ "NZ", "DCM", "P" ], [1, 2, 1])).
+
+apply_moves(Stacks, Moves) ->
+    lists:foldl(fun(Move, Acc) -> apply_move(Acc, Move) end, Stacks, Moves).
+
+apply_moves_test() ->
+    [Stacks, Moves] = read_input("test_input_day05.txt"),
+    ?assertEqual(["C", "M", "ZNDP"], apply_moves(Stacks, Moves)).
+
+part1(FileName) ->
+    [Stacks, Moves] = read_input(FileName),
+    FinalStacks = apply_moves(Stacks, Moves),
+    lists:map(fun([H|_]) -> H end, FinalStacks).
+
+part1_test() ->
+    TestFileName = "test_input_day05.txt",
+    TestResult = part1(TestFileName),
+    ?debugFmt("Result for ~p: ~p", [TestFileName, TestResult]),
+    ?assertEqual("CMZ", TestResult),
+
+    FileName = "input_day05.txt",
+    Result = part1(FileName),
+    ?debugFmt("Result for ~p: ~p", [FileName, Result]),
+    ?assertEqual("BZLVHBWQF", Result).
 
 -endif.
