@@ -6,39 +6,41 @@
 
 part1(FileName) ->
     [Stacks, Moves] = read_input(FileName),
-    FinalStacks = apply_moves(Stacks, Moves),
+    CraneType = t9000,
+    FinalStacks = apply_moves(Stacks, Moves, CraneType),
     lists:map(fun([H|_]) -> H end, FinalStacks).
 
 part2(FileName) ->
     [Stacks, Moves] = read_input(FileName),
-    FinalStacks = apply_moves(Stacks, Moves),
+    CraneType = t9001,
+    FinalStacks = apply_moves(Stacks, Moves, CraneType),
     lists:map(fun([H|_]) -> H end, FinalStacks).
 
 %%% Internal functions
 
-apply_move(Stacks, [What, From, Where]) ->
+apply_move(Stacks, [What, From, To], CraneType) ->
     Dict1 = orddict:from_list(lists:enumerate(Stacks)),
 
     {InStack, _} = orddict:take(From, Dict1),
-    {OutStack, _} = orddict:take(Where, Dict1),
+    {OutStack, _} = orddict:take(To, Dict1),
 
     %% Update 'From' stack
     {MovingPart, InStackUpdated} = lists:split(What, InStack),
     Dict2 = orddict:store(From, InStackUpdated, Dict1),
 
-    %% TODO: Reverse what we move (this part is different for part1 and part2)
-    MovingPartReversed = lists:reverse(MovingPart),
-    %% TODO: it is only quick hack for part two
-    %%MovingPartReversed = MovingPart,
+    MovingPartReshufled = case CraneType of
+                              t9000 -> lists:reverse(MovingPart);
+                              t9001 -> MovingPart
+                          end,
 
-    %% Update 'Where/To' stack
-    OutStackUpdated = MovingPartReversed ++ OutStack,
-    Dict3 = orddict:store(Where, OutStackUpdated, Dict2),
+    OutStackUpdated = MovingPartReshufled ++ OutStack,
+    Dict3 = orddict:store(To, OutStackUpdated, Dict2),
 
-    lists:map(fun({_Key, Val}) -> Val end, orddict:to_list(Dict3)).
+    {CraneType, lists:map(fun({_Key, Val}) -> Val end, orddict:to_list(Dict3))}.
 
-apply_moves(Stacks, Moves) ->
-    lists:foldl(fun(Move, Acc) -> apply_move(Acc, Move) end, Stacks, Moves).
+apply_moves(Stacks, Moves, CraneType) ->
+    {_IgnoredCrane, FinalStacks} = lists:foldl(fun(Move, {Crane, Acc}) -> apply_move(Acc, Move, Crane) end, {CraneType, Stacks}, Moves),
+    FinalStacks.
 
 find_empty_line_idx(Lines) -> find_empty_line_idx(Lines, 0).
 find_empty_line_idx([Line|RestLines], Acc) ->
@@ -83,8 +85,8 @@ slice(ToSlice) ->
     Out.
 
 extract_move_line(Line) ->
-    [_, What, _, From, _, Where] = string:tokens(Line, " "),
-    lists:map(fun(Str) ->  {Int, _} = string:to_integer(Str), Int end, [What, From, Where]).
+    [_, What, _, From, _, To] = string:tokens(Line, " "),
+    lists:map(fun(Str) ->  {Int, _} = string:to_integer(Str), Int end, [What, From, To]).
 
 read_input(FileName) ->
     FileLines = aoc_input_app:read_file_lines2(FileName),
@@ -149,13 +151,14 @@ read_input_test() ->
 %% move 1 from 1 to 2
 %%
 
-%% TODO: Where -> To
 apply_move_test() ->
-    ?assertEqual([ "DNZ", "CM", "P" ], apply_move([ "NZ", "DCM", "P" ], [1, 2, 1])).
+    ?assertEqual({t9000, [ "DNZ", "CM", "P" ]}, apply_move([ "NZ", "DCM", "P" ], [1, 2, 1], t9000)), %% this test should test moving more than one crate
+    ?assertEqual({t9001, [ "DNZ", "CM", "P" ]}, apply_move([ "NZ", "DCM", "P" ], [1, 2, 1], t9001)). %% this test should test moving more than one crate
 
 apply_moves_test() ->
     [Stacks, Moves] = read_input("test_input_day05.txt"),
-    ?assertEqual(["C", "M", "ZNDP"], apply_moves(Stacks, Moves)).
+    ?assertEqual(["C", "M", "ZNDP"], apply_moves(Stacks, Moves, t9000)),
+    ?assertEqual(["M", "C", "DNZP"], apply_moves(Stacks, Moves, t9001)).
 
 part1_test() ->
     TestFileName = "test_input_day05.txt",
