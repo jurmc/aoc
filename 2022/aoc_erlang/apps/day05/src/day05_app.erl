@@ -125,8 +125,10 @@ apply_move(Stacks, [What, From, Where]) ->
     {MovingPart, InStackUpdated} = lists:split(What, InStack),
     Dict2 = orddict:store(From, InStackUpdated, Dict1),
 
-    %% Reverse what we move
+    %% TODO: Reverse what we move (this part is different for part1 and part2)
     MovingPartReversed = lists:reverse(MovingPart),
+    %% TODO: it is only quick hack for part two
+    %%MovingPartReversed = MovingPart,
 
     %% Update 'Where/To' stack
     OutStackUpdated = MovingPartReversed ++ OutStack,
@@ -149,6 +151,11 @@ part1(FileName) ->
     FinalStacks = apply_moves(Stacks, Moves),
     lists:map(fun([H|_]) -> H end, FinalStacks).
 
+part2(FileName) ->
+    [Stacks, Moves] = read_input(FileName),
+    FinalStacks = apply_moves(Stacks, Moves),
+    lists:map(fun([H|_]) -> H end, FinalStacks).
+
 part1_test() ->
     TestFileName = "test_input_day05.txt",
     TestResult = part1(TestFileName),
@@ -159,5 +166,16 @@ part1_test() ->
     Result = part1(FileName),
     ?debugFmt("Result for ~p: ~p", [FileName, Result]),
     ?assertEqual("BZLVHBWQF", Result).
+
+part2_test() ->
+    TestFileName = "test_input_day05.txt",
+    TestResult = part2(TestFileName),
+    ?debugFmt("Result for ~p: ~p", [TestFileName, TestResult]),
+    ?assertEqual("MCD", TestResult),
+
+    FileName = "input_day05.txt",
+    Result = part2(FileName),
+    ?debugFmt("Result for ~p: ~p", [FileName, Result]),
+    ?assertEqual("TDGJQTZSL", Result).
 
 -endif.
