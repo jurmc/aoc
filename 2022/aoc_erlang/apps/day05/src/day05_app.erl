@@ -10,17 +10,6 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-%%     [D]    
-%% [N] [C]    
-%% [Z] [M] [P]
-%%  1   2   3 
-%% 
-%% move 1 from 2 to 1
-%% move 3 from 1 to 3
-%% move 2 from 2 to 1
-%% move 1 from 1 to 2
-%%
-
 extract_stack_line(Line) ->
     extract_stack_line([32|Line], []).
 extract_stack_line([], Acc) -> lists:reverse(Acc);
@@ -68,33 +57,58 @@ create_stacks(StacksLinesLists) ->
     lists:map(fun(List) ->
                       lists:flatten(lists:filter(fun(C) -> C =/= [] end, List))
               end,
-             TransposedLists).
+              TransposedLists).
 
 create_stacks_test() ->
-    ?assertEqual(["NZ", "DCM", "P"], create_stacks([[[],"D",[]],["N","C",[]],["Z","M","P"]])),
+    ?assertEqual(["NZ", "DCM", "P"], create_stacks([[[],"D",[]],["N","C",[]],["Z","M","P"]])).
+
+%%
+%%     [D]    
+%% [N] [C]    
+%% [Z] [M] [P]
+%%  1   2   3 
+%% 
+%% move 1 from 2 to 1
+%% move 3 from 1 to 3
+%% move 2 from 2 to 1
+%% move 1 from 1 to 2
+%%
+
+extract_move_line(Line) ->
+    [_, What, _, From, _, Where] = string:tokens(Line, " "),
+    lists:map(fun(Str) ->  {Int, _} = string:to_integer(Str), Int end, [Where, From, Where]).
+
+extract_move_line_test() ->
+    ?assertEqual([1, 2, 1], extract_move_line("move 1 from 2 to 1")).
 
 read_input(FileName) ->
     FileLines = aoc_input_app:read_file_lines2(FileName),
     EmptyLineIdx = find_empty_line_idx(FileLines),
     {StackLines, [_IgnoredEmpty|MoveLines]} = lists:split(EmptyLineIdx-1, FileLines),
 
+    %% TODO: here is too late to conver binearies to lists
     StacksLinesLists = lists:map(fun(Line) -> extract_stack_line(binary:bin_to_list(Line)) end, StackLines),
     Stacks = create_stacks(StacksLinesLists),
-    ?debugFmt("Stacks: ~p\n", [Stacks]),
 
-    %% TODO: fake implementation
-    [["NZ", "DCM", "P"], [[1, 2, 1], [3, 1, 3], [2, 2, 1], [1, 1, 2]]].
+    %% TODO: here is too late to conver binearies to lists
+    %% TODO: why we have [] at the end of lines? thats why before extraction we're filtering...
+    LineStrings = lists:map(fun(X) -> binary:bin_to_list(X) end, MoveLines),
+    FilteredMoveLines = lists:filter(fun(X) -> X =/= [] end, LineStrings),
+    Moves = lists:map(fun(Line) -> extract_move_line(Line) end, FilteredMoveLines),
 
-%%read_input_test() ->
-%%    [Stacks, Moves] = read_input("test_input_day05.txt"),
-%%    ExpectedStacks = [ "NZ", "DCM", "P" ],
-%%    ExpectedMoves = [
-%%                     [1, 2, 1],
-%%                     [3, 1, 3],
-%%                     [2, 2, 1],
-%%                     [1, 1, 2]
-%%                    ],
-%%    ?assertEqual(ExpectedStacks, Stacks),
-%%    ?assertEqual(ExpectedMoves, Moves).
+    %% TODO: partially fake implementation
+    [Stacks, [[1, 2, 1], [3, 1, 3], [2, 2, 1], [1, 1, 2]]].
+
+read_input_test() ->
+    [Stacks, Moves] = read_input("test_input_day05.txt"),
+    ExpectedStacks = [ "NZ", "DCM", "P" ],
+    ExpectedMoves = [
+                     [1, 2, 1],
+                     [3, 1, 3],
+                     [2, 2, 1],
+                     [1, 1, 2]
+                    ],
+    ?assertEqual(ExpectedStacks, Stacks),
+    ?assertEqual(ExpectedMoves, Moves).
 
 -endif.
