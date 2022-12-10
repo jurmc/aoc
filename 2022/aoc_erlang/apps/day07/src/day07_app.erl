@@ -223,7 +223,6 @@ part2_test() ->
 
     Result = part2("input_day07.txt"),
     ?debugFmt("Part2 result: ~p\n", [Result]),
-    %%?assertEqual(24933642, Result).
-    ok.
+    ?assertEqual(12390492, Result).
 
 -endif.
