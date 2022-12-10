@@ -4,9 +4,6 @@
 
 %%% Exported functions
 
-sizes_list(AllDirs, DirsDict, FilesDict) ->
-    lists:map(fun(Dir) -> get_size_for_dir(Dir, DirsDict, FilesDict) end, AllDirs).
-
 part1(FileName) ->
     {AllDirs, DirsDict, FilesDict} = process_entries(FileName),
 
@@ -28,6 +25,9 @@ part2(FileName) ->
     lists:min(lists:sort(lists:filter(fun(Size) -> Size >= CurrReqSpace end, SizesList))).
 
 %%% Internal functions
+
+sizes_list(AllDirs, DirsDict, FilesDict) ->
+    lists:map(fun(Dir) -> get_size_for_dir(Dir, DirsDict, FilesDict) end, AllDirs).
 
 process_entries(FileName) ->
     Lines = aoc_input_app:read_file_lines(FileName, [split_lines_into_words]),
