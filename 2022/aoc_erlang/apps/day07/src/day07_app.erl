@@ -4,19 +4,18 @@
 
 %%% Exported functions
 
-part1(FileName) ->
-    {DirsDict, FilesDict} = process_entries(FileName),
+sizes_list(AllDirs, DirsDict, FilesDict) ->
+    lists:map(fun(Dir) -> get_size_for_dir(Dir, DirsDict, FilesDict) end, AllDirs).
 
-    AllDirs = orddict:fetch_keys(DirsDict),
-    SizesList =lists:map(fun(Dir) ->
-                                 get_size_for_dir(Dir, DirsDict, FilesDict)
-                         end,
-                         AllDirs),
+part1(FileName) ->
+    {AllDirs, DirsDict, FilesDict} = process_entries(FileName),
+
+    SizesList = sizes_list(AllDirs, DirsDict, FilesDict),
     SizesAtMost100000 = lists:filter(fun(Size) -> Size =< 100000 end, SizesList),
     lists:sum(SizesAtMost100000).
 
 part2(FileName) ->
-    {DirsDict, FilesDict} = process_entries(FileName),
+    {AllDirs, DirsDict, FilesDict} = process_entries(FileName),
 
     TotalSpace = 70000000,
     CurrOccupiedSpace = get_size_for_dir(["/"], DirsDict, FilesDict),
@@ -25,62 +24,61 @@ part2(FileName) ->
     MinReqSpace = 30000000,
     CurrReqSpace = MinReqSpace - CurrFreeSpace,
 
-    AllDirs = orddict:fetch_keys(DirsDict),
-    SizesList = lists:map(fun(Dir) ->
-                                  get_size_for_dir(Dir, DirsDict, FilesDict)
-                          end,
-                          AllDirs),
+    SizesList = sizes_list(AllDirs, DirsDict, FilesDict),
     lists:min(lists:sort(lists:filter(fun(Size) -> Size >= CurrReqSpace end, SizesList))).
 
 %%% Internal functions
 
 process_entries(FileName) ->
     Lines = aoc_input_app:read_file_lines(FileName, [split_lines_into_words]),
-    {_, ForDirs} = process_entries_for_dirs(Lines),
-    {_, ForFiles} = process_entries_for_files(Lines),
-    {ForDirs, ForFiles}.
+    ForDirs = process_entries_for_dirs(Lines),
+    ForFiles = process_entries_for_files(Lines),
+    Dirs = orddict:fetch_keys(ForDirs),
+    {Dirs, ForDirs, ForFiles}.
 
 process_entries_for_files(ContexEntries) ->
-    lists:foldl(fun(["$", "cd", "/"], {[], Acc}) ->
-                        {["/"], orddict:store(["/"], [], Acc)};
-                   (["$", "ls"], {Cwd, Acc}) ->
-                        {Cwd, Acc};
-                   (["$", "cd", ".."], {Cwd, Acc}) ->
-                        UpdatedCwd = lists:reverse(tl(lists:reverse(Cwd))),
-                        {UpdatedCwd, Acc};
-                   (["$", "cd", NewDir], {Cwd, Acc}) ->
-                        UpdatedCwd = lists:append(Cwd, [NewDir]),
-                        {UpdatedCwd, orddict:store(UpdatedCwd, [], Acc)};
-                   (["dir", _], {Cwd, Acc}) ->
-                        {Cwd, Acc};
-                   ([Size, File], {Cwd, Acc}) ->
-                        {CurrDirFiles, Dict} = orddict:take(Cwd, Acc),
-                        UpdatedDirFiles = lists:append(CurrDirFiles, [{Size, File}]),
-                        {Cwd, orddict:store(Cwd, UpdatedDirFiles, Dict)}
-                end,
-                {[], orddict:from_list([])},
-                ContexEntries).
+    {_, Result} = lists:foldl(fun(["$", "cd", "/"], {[], Acc}) ->
+                                      {["/"], orddict:store(["/"], [], Acc)};
+                                 (["$", "ls"], {Cwd, Acc}) ->
+                                      {Cwd, Acc};
+                                 (["$", "cd", ".."], {Cwd, Acc}) ->
+                                      UpdatedCwd = lists:reverse(tl(lists:reverse(Cwd))),
+                                      {UpdatedCwd, Acc};
+                                 (["$", "cd", NewDir], {Cwd, Acc}) ->
+                                      UpdatedCwd = lists:append(Cwd, [NewDir]),
+                                      {UpdatedCwd, orddict:store(UpdatedCwd, [], Acc)};
+                                 (["dir", _], {Cwd, Acc}) ->
+                                      {Cwd, Acc};
+                                 ([Size, File], {Cwd, Acc}) ->
+                                      {CurrDirFiles, Dict} = orddict:take(Cwd, Acc),
+                                      UpdatedDirFiles = lists:append(CurrDirFiles, [{Size, File}]),
+                                      {Cwd, orddict:store(Cwd, UpdatedDirFiles, Dict)}
+                              end,
+                              {[], orddict:from_list([])},
+                              ContexEntries),
+    Result.
 
 process_entries_for_dirs(ContexEntries) ->
-    lists:foldl(fun(["$", "cd", "/"], {[], Acc}) ->
-                        {["/"], orddict:store(["/"], [], Acc)};
-                   (["$", "ls"], {Cwd, Acc}) ->
-                        {Cwd, Acc};
-                   (["$", "cd", ".."], {Cwd, Acc}) ->
-                        UpdatedCwd = lists:reverse(tl(lists:reverse(Cwd))),
-                        {UpdatedCwd, Acc};
-                   (["$", "cd", NewDir], {Cwd, Acc}) ->
-                        UpdatedCwd = lists:append(Cwd, [NewDir]),
-                        {UpdatedCwd, orddict:store(UpdatedCwd, [], Acc)};
-                   (["dir", Dir], {Cwd, Acc}) ->
-                        {CurrDirDirs, Dict} = orddict:take(Cwd, Acc),
-                        UpdatedDirDirs = lists:append(CurrDirDirs, [Dir]),
-                        {Cwd, orddict:store(Cwd, UpdatedDirDirs, Dict)};
-                   ([_, _], {Cwd, Acc}) ->
-                        {Cwd, Acc}
-                end,
-                {[], orddict:from_list([])},
-                ContexEntries).
+    {_, Result} = lists:foldl(fun(["$", "cd", "/"], {[], Acc}) ->
+                                      {["/"], orddict:store(["/"], [], Acc)};
+                                 (["$", "ls"], {Cwd, Acc}) ->
+                                      {Cwd, Acc};
+                                 (["$", "cd", ".."], {Cwd, Acc}) ->
+                                      UpdatedCwd = lists:reverse(tl(lists:reverse(Cwd))),
+                                      {UpdatedCwd, Acc};
+                                 (["$", "cd", NewDir], {Cwd, Acc}) ->
+                                      UpdatedCwd = lists:append(Cwd, [NewDir]),
+                                      {UpdatedCwd, orddict:store(UpdatedCwd, [], Acc)};
+                                 (["dir", Dir], {Cwd, Acc}) ->
+                                      {CurrDirDirs, Dict} = orddict:take(Cwd, Acc),
+                                      UpdatedDirDirs = lists:append(CurrDirDirs, [Dir]),
+                                      {Cwd, orddict:store(Cwd, UpdatedDirDirs, Dict)};
+                                 ([_, _], {Cwd, Acc}) ->
+                                      {Cwd, Acc}
+                              end,
+                              {[], orddict:from_list([])},
+                              ContexEntries),
+    Result.
 
 get_size_for_dir(Dir, DirsDict, FilesDict) ->
     {CurDirFiles, _} = orddict:take(Dir, FilesDict),
@@ -100,7 +98,6 @@ get_size_for_dir(Dir, DirsDict, FilesDict) ->
                                  0,
                                  CurDirDirs),
 
-
     SumSizeForDirs + SumSizeForFiles.
 
 
@@ -117,7 +114,7 @@ process_entries_for_files_test() ->
                       {["/", "a", "e"],                                                                   [{"584", "i"}]},
                       {     ["/", "d"], [{"4060174", "j"}, {"8033020", "d.log"}, {"5626152", "d.ext"}, {"7214296", "k"}]}
                      ]),
-    {_, Dirs} = process_entries_for_files(Lines),
+    Dirs = process_entries_for_files(Lines),
     ?assertEqual(ExpectedFiles, Dirs).
 
 process_entries_for_dirs_test() ->
@@ -129,27 +126,18 @@ process_entries_for_dirs_test() ->
                       {["/", "a", "e"],         []},
                       {     ["/", "d"],         []}
                      ]),
-    {_, Dirs} = process_entries_for_dirs(Lines),
+    Dirs = process_entries_for_dirs(Lines),
     ?assertEqual(ExpectedDirs, Dirs).
 
 get_size_for_dir_test() ->
-    {DirsDict, FilesDict} = process_entries("test_input_day07.txt"),
+    {_, DirsDict, FilesDict} = process_entries("test_input_day07.txt"),
 
-    Dir1 = ["/", "d"],
-    ?assertEqual(4060174 + 8033020 + 5626152 + 7214296, get_size_for_dir(Dir1, DirsDict, FilesDict)),
+    Dir1 = ["/", "a", "e"],
+    ?assertEqual(584, get_size_for_dir(Dir1, DirsDict, FilesDict)),
 
-    Dir2 = ["/", "a", "e"],
-    ?assertEqual(584, get_size_for_dir(Dir2, DirsDict, FilesDict)),
 
-    Dir3 = ["/", "a"],
-    ?assertEqual(94853, get_size_for_dir(Dir3, DirsDict, FilesDict)),
-
-    Dir4 = ["/", "d"],
-    ?assertEqual(24933642, get_size_for_dir(Dir4, DirsDict, FilesDict)),
-
-    Dir5 = ["/"],
-    ?assertEqual(48381165, get_size_for_dir(Dir5, DirsDict, FilesDict)).
-
+    Dir2 = ["/"],
+    ?assertEqual(48381165, get_size_for_dir(Dir2, DirsDict, FilesDict)).
 
 part1_test() ->
     ?assertEqual(95437, part1("test_input_day07.txt")),
