@@ -1,5 +1,10 @@
 -module(aoc_input_app).
 
+-define(NEWLINE, 10).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
 -export([read_file/1, read_file_lines/1, read_file_lines/2, read_file_lines2/1, read_file_lines_into_2_columns/1, remove_empty_lines/1]).
 
 %%%
@@ -9,19 +14,45 @@
 read_file(FileName) ->
     file:read_file(os:getenv("AOC_INPUT") ++ "/" ++ FileName).
 
+read_file_lines_do_not_remove_line_breaks(FileName) ->
+    {ok, FileContent} = read_file(FileName),
+    read_file_lines_do_not_remove_line_breaks(binary:bin_to_list(FileContent), []).
+
+read_file_lines_do_not_remove_line_breaks([], Acc) -> lists:reverse(Acc);
+read_file_lines_do_not_remove_line_breaks(String, []) ->
+    case string:split(String, "\n") of
+        [[], RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[]]);
+        [Line, RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[],Line]);
+        [Line] -> Line
+    end;
+read_file_lines_do_not_remove_line_breaks(String, Acc) ->
+    case string:split(String, "\n") of
+        [[], RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[]|Acc]);
+        [Line, RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[],Line|Acc]);
+        [Line] -> [Line|Acc]
+    end.
+
+
+
 
 read_file_lines(FileName) ->
     {ok, FileContent} = read_file(FileName),
     string:tokens(erlang:binary_to_list(FileContent), "\n").
 
-% TODO: for now only legal option is: split_lines_into_words
+% Legal option are:
+% - remove_line_breaks
+% - split_lines_into_words
 read_file_lines(FileName, [Opts]) ->
     InLines = read_file_lines(FileName),
 
+    % TODO: at the moments options cannot be combined
     OutLines = case Opts of
                    split_lines_into_words ->
                        lists:map(fun(Line) -> string:tokens(Line, " ") end, InLines);
+                   remove_line_breaks ->
+                       InLines; % TODO: not implemented
                    _ -> InLines
+
                end,
     OutLines.
 
@@ -51,20 +82,17 @@ remove_empty_lines(Lines) ->
 %%%
 
 file_content_into_list_of_lines(FileContent) ->
-    %%[[], "ab", [], "cd", "ef"].
     file_content_into_list_of_lines(FileContent, []).
 
 file_content_into_list_of_lines([], Acc) -> lists:reverse(Acc);
-file_content_into_list_of_lines([10|T], Acc) ->
-    file_content_into_list_of_lines(T, [[]|Acc]);
 file_content_into_list_of_lines(FileContent, Acc) ->
     case string:split(FileContent, "\n") of
         [Line, RestLines] -> file_content_into_list_of_lines(RestLines, [Line|Acc]);
         [Line] -> file_content_into_list_of_lines([], [Line|Acc])
     end.
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
+%%-ifdef(TEST).
+%%-include_lib("eunit/include/eunit.hrl").
 
 file_content_into_list_of_lines_test() ->
     ?assertEqual([[], "ab", [], "cd", "ef"], file_content_into_list_of_lines("\nab\n\ncd\nef\n")),
@@ -73,6 +101,31 @@ file_content_into_list_of_lines_test() ->
 remove_empty_lines_test() ->
     ?assertEqual(["ab", "cd", "ef"], remove_empty_lines([[], "ab", [], "cd", "ef"])),
     ?assertEqual(["ab", "cd", "ef"], remove_empty_lines(["ab", [], "cd", "ef", []])).
+
+merge_functions_test() ->
+    FileName = "test_input_day05.txt",
+    Content1 = read_file_lines(FileName, [remove_line_breaks]),
+    Content2 = read_file_lines(FileName),
+    ?assertEqual(Content1, Content2).
+
+read_file_lines_do_not_remove_line_breaks_test() ->
+    FileName = "test_input_day01.txt",
+    ?assertEqual(["1000", [],
+                  "2000", [],
+                  "3000", [],
+                  [],
+                  "4000", [],
+                  [],
+                  "5000", [],
+                  "6000", [],
+                  [],
+                  "7000", [],
+                  "8000", [],
+                  "9000", [],
+                  [],
+                  "10000", []
+                 ],
+                 read_file_lines_do_not_remove_line_breaks(FileName)).
 
 -endif.
 
