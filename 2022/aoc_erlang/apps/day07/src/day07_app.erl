@@ -30,7 +30,7 @@ sizes_list(AllDirs, DirsDict, FilesDict) ->
     lists:map(fun(Dir) -> get_size_for_dir(Dir, DirsDict, FilesDict) end, AllDirs).
 
 process_entries(FileName) ->
-    Lines = aoc_input_app:read_file_lines(FileName, [split_lines_into_words]),
+    Lines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks, split_lines_into_words]),
     ForDirs = process_entries_for_dirs(Lines),
     ForFiles = process_entries_for_files(Lines),
     Dirs = orddict:fetch_keys(ForDirs),
@@ -106,7 +106,7 @@ get_size_for_dir(Dir, DirsDict, FilesDict) ->
 -include_lib("eunit/include/eunit.hrl").
 
 process_entries_for_files_test() ->
-    Lines = aoc_input_app:read_file_lines("test_input_day07.txt", [split_lines_into_words]),
+    Lines = aoc_input_app:read_file_lines("test_input_day07.txt", [remove_line_breaks, split_lines_into_words]),
     ExpectedFiles = orddict:from_list(
                      [
                                 {["/"],                                    [{"14848514", "b.txt"}, {"8504156", "c.dat"}]},
@@ -118,7 +118,7 @@ process_entries_for_files_test() ->
     ?assertEqual(ExpectedFiles, Dirs).
 
 process_entries_for_dirs_test() ->
-    Lines = aoc_input_app:read_file_lines("test_input_day07.txt", [split_lines_into_words]),
+    Lines = aoc_input_app:read_file_lines("test_input_day07.txt", [remove_line_breaks, split_lines_into_words]),
     ExpectedDirs = orddict:from_list(
                      [
                       {          ["/"], ["a", "d"]},

@@ -5,7 +5,7 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--export([read_file/1, read_file_lines/1, read_file_lines/2, read_file_lines2/1, read_file_lines_into_2_columns/1, remove_empty_lines/1]).
+-export([read_file/1, read_file_lines/1, read_file_lines/2, read_file_lines_do_not_remove_line_breaks/1, read_file_lines2/1, read_file_lines_into_2_columns/1, remove_empty_lines/1]).
 
 %%%
 %%% Reading files
@@ -32,9 +32,7 @@ read_file_lines_do_not_remove_line_breaks(String, Acc) ->
         [Line] -> [Line|Acc]
     end.
 
-
-
-
+%% TODO Next refactoring step, function below should retrun lines with linebreaks
 read_file_lines(FileName) ->
     {ok, FileContent} = read_file(FileName),
     string:tokens(erlang:binary_to_list(FileContent), "\n").
@@ -42,19 +40,24 @@ read_file_lines(FileName) ->
 % Legal option are:
 % - remove_line_breaks
 % - split_lines_into_words
-read_file_lines(FileName, [Opts]) ->
-    InLines = read_file_lines(FileName),
+read_file_lines(FileName, Opts) ->
+    %%InLines = read_file_lines(FileName),
+    InLines = read_file_lines_do_not_remove_line_breaks(FileName),
 
-    % TODO: at the moments options cannot be combined
-    OutLines = case Opts of
-                   split_lines_into_words ->
-                       lists:map(fun(Line) -> string:tokens(Line, " ") end, InLines);
-                   remove_line_breaks ->
-                       InLines; % TODO: not implemented
+    %% TODO: process Opts sequentially (in the order they were passed in)
+    OutLines1 = case lists:member(remove_line_breaks, Opts) of
+                   true ->
+                       lists:filter(fun(Line) -> Line =/= [] end, InLines);
                    _ -> InLines
 
                end,
-    OutLines.
+    OutLines2 = case lists:member(split_lines_into_words, Opts) of
+                   true ->
+                       lists:map(fun(Line) -> string:tokens(Line, " ") end, OutLines1);
+                   _ -> OutLines1
+
+               end,
+    OutLines2.
 
 %% TODO: Merge it with read_file_lines (above)
 read_file_lines2(FileName) ->
