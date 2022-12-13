@@ -12,7 +12,7 @@
 
 part1(FileName) ->
     EvaluatedAndCombined = solve(FileName, fun get_visible_for_edge/1, fun combine_field_for_part1/2),
-    lists:foldl(fun(List, Acc) -> lists:sum(List) + Acc end, 0, EvaluatedAndCombined).
+    lists:sum(lists:flatten(EvaluatedAndCombined)).
 
 part2(FileName) ->
     EvaluatedAndCombined = solve(FileName, fun get_scenic_score_for_edge/1, fun combine_field_for_part2/2),
@@ -67,7 +67,6 @@ get_scenic_score_for_row([H|T]) -> get_scenic_score_for_row(T, {H, 0}).
 
 get_scenic_score_for_row([], {_ReferenceHeigth, CurrScore}) -> CurrScore;
 get_scenic_score_for_row([H|T], {ReferenceHeigth, CurrScore}) ->
-    %%?debugFmt("get_scenic_score_for_row: H: ~p, T: ~p, Max: ~p, CurrScore: ~p~n", [H, T, ReferenceHeigth, CurrScore]),
     case H >= ReferenceHeigth of
         true -> CurrScore + 1;
         false -> get_scenic_score_for_row(T, {ReferenceHeigth, CurrScore + 1})

@@ -161,25 +161,11 @@ apply_moves_test() ->
     ?assertEqual(["M", "C", "DNZP"], apply_moves(Stacks, Moves, t9001)).
 
 part1_test() ->
-    TestFileName = "test_input_day05.txt",
-    TestResult = part1(TestFileName),
-    ?debugFmt("Result for ~p: ~p", [TestFileName, TestResult]),
-    ?assertEqual("CMZ", TestResult),
-
-    FileName = "input_day05.txt",
-    Result = part1(FileName),
-    ?debugFmt("Result for ~p: ~p", [FileName, Result]),
-    ?assertEqual("BZLVHBWQF", Result).
+    ?assertEqual("CMZ", part1("test_input_day05.txt")),
+    ?assertEqual("BZLVHBWQF", part1("input_day05.txt")).
 
 part2_test() ->
-    TestFileName = "test_input_day05.txt",
-    TestResult = part2(TestFileName),
-    ?debugFmt("Result for ~p: ~p", [TestFileName, TestResult]),
-    ?assertEqual("MCD", TestResult),
-
-    FileName = "input_day05.txt",
-    Result = part2(FileName),
-    ?debugFmt("Result for ~p: ~p", [FileName, Result]),
-    ?assertEqual("TDGJQTZSL", Result).
+    ?assertEqual("MCD", part2("test_input_day05.txt")),
+    ?assertEqual("TDGJQTZSL", part2("input_day05.txt")).
 
 -endif.

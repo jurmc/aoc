@@ -23,8 +23,7 @@ detect_marker(String, Length, Acc) ->
     case sets:size(sets:from_list(AnalyzedString)) of
         Length -> {AnalyzedString, Acc};
         _ -> detect_marker(tl(AnalyzedString) ++ Rest, Length, Acc+1)
-    end;
-detect_marker(_, _, _) -> not_implemented.
+    end.
 
 %%% Unit tests
 -ifdef(TEST).
@@ -46,11 +45,11 @@ detect_marker_test() ->
     ?assertEqual(26, element(2, detect_marker("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", Part2MarkerLen))).
 
 part1_test() ->
-    {Marker, Position} = part1("test_input_day06.txt"),
-    ?debugFmt("Part1, Marker: ~p, Position: ~p\n", [Marker, Position]).
+    {_, Position} = part1("input_day06.txt"),
+    ?assertEqual(1480, Position).
 
 part2_test() ->
-    {Marker, Position} = part2("test_input_day06.txt"),
-    ?debugFmt("Part2, Marker: ~p, Position: ~p\n", [Marker, Position]).
+    {_, Position} = part2("input_day06.txt"),
+    ?assertEqual(2746, Position).
 
 -endif.
