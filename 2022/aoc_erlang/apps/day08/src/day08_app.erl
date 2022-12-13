@@ -4,6 +4,12 @@
 
 %%% Exported functions
 
+%% TODO: In tests (without reading files) I use list of integers
+%%       When I read from file I'm leaving character/asci codes (without conversion to ints).
+%%       It works since ascii codes are ordered as numbers they represent (with different base values)
+%%       This might however be fixed, by converting ASCII codes to to integers (and having proper OPTS in
+%%       read function might be useful in future.
+
 part1(FileName) ->
     EvaluatedAndCombined = solve(FileName, fun get_visible_for_edge/1, fun combine_field_for_part1/2),
     lists:foldl(fun(List, Acc) -> lists:sum(List) + Acc end, 0, EvaluatedAndCombined).
