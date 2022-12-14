@@ -37,27 +37,18 @@ read_file_lines(FileName) ->
     {ok, FileContent} = read_file(FileName),
     string:tokens(erlang:binary_to_list(FileContent), "\n").
 
-% Legal option are:
-% - remove_line_breaks
-% - split_lines_into_words
+process_opts(Lines, []) -> Lines;
+process_opts(Lines, [Opt|Opts]) ->
+    case Opt of
+        remove_line_breaks -> process_opts(lists:filter(fun(Line) -> Line =/= [] end, Lines), Opts);
+        split_lines_into_words -> process_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
+        split_lines_into_characters -> Lines; %% TODO not_implementedprocess_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
+        _ -> exit({"Not supported option", Opt})
+    end.
+
 read_file_lines(FileName, Opts) ->
-    %%InLines = read_file_lines(FileName),
     InLines = read_file_lines_do_not_remove_line_breaks(FileName),
-
-    %% TODO: process Opts sequentially (in the order they were passed in)
-    OutLines1 = case lists:member(remove_line_breaks, Opts) of
-                   true ->
-                       lists:filter(fun(Line) -> Line =/= [] end, InLines);
-                   _ -> InLines
-
-               end,
-    OutLines2 = case lists:member(split_lines_into_words, Opts) of
-                   true ->
-                       lists:map(fun(Line) -> string:tokens(Line, " ") end, OutLines1);
-                   _ -> OutLines1
-
-               end,
-    OutLines2.
+    process_opts(InLines, Opts).
 
 %% TODO: Merge it with read_file_lines (above)
 read_file_lines2(FileName) ->
