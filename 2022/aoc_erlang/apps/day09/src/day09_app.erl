@@ -98,5 +98,37 @@ part1_test() ->
     ?assertEqual(13, part1("test_input_day09.txt")),
     ?assertEqual(6026, part1("input_day09.txt")).
 
+part2_1_test() ->
+    FileName = "test_input_day09.txt",
+    HeadPositions = apply_h_moves(load_input(FileName)),
+    TailPositions1 = apply_t_moves(HeadPositions),
+    TailPositions2 = apply_t_moves(TailPositions1),
+    TailPositions3 = apply_t_moves(TailPositions2),
+    TailPositions4 = apply_t_moves(TailPositions3),
+    TailPositions5 = apply_t_moves(TailPositions4),
+    TailPositions6 = apply_t_moves(TailPositions5),
+    TailPositions7 = apply_t_moves(TailPositions6),
+    TailPositions8 = apply_t_moves(TailPositions7),
+    TailPositions9 = apply_t_moves(TailPositions8),
+
+    Result = sets:size(sets:from_list(TailPositions9)),
+    ?debugFmt("Test result: ~p~n", [Result]).
+
+part2_2_test() ->
+    FileName = "input_day09.txt",
+    HeadPositions = apply_h_moves(load_input(FileName)),
+    TailPositions1 = apply_t_moves(HeadPositions),
+    TailPositions2 = apply_t_moves(TailPositions1),
+    TailPositions3 = apply_t_moves(TailPositions2),
+    TailPositions4 = apply_t_moves(TailPositions3),
+    TailPositions5 = apply_t_moves(TailPositions4),
+    TailPositions6 = apply_t_moves(TailPositions5),
+    TailPositions7 = apply_t_moves(TailPositions6),
+    TailPositions8 = apply_t_moves(TailPositions7),
+    TailPositions9 = apply_t_moves(TailPositions8),
+
+    Result = sets:size(sets:from_list(TailPositions9)),
+    ?debugFmt("Result: ~p~n", [Result]).
+
 -endif.
 
