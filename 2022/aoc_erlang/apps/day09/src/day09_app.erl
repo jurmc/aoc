@@ -8,21 +8,20 @@
 %%% Exported functions
 
 part1(FileName) ->
-    HeadPositions = apply_h_moves(load_input(FileName)),
-    TailPositions = apply_t_moves(HeadPositions),
-    sets:size(sets:from_list(TailPositions)).
+    solve(FileName, 2).
 
-%% TODO: Knots number should be parametrized
 part2(FileName) ->
-    NumKnots = 10,
+    solve(FileName, 10).
+
+%%% Internal functions
+
+solve(FileName, NumKnots) ->
     FinalTailPositions = lists:foldl(fun(Idx, TailPositions) ->
                                              apply_t_moves(TailPositions)
                                      end,
                                      apply_h_moves(load_input(FileName)),
                                      lists:seq(1,NumKnots-1)),
     sets:size(sets:from_list(FinalTailPositions)).
-
-%%% Internal functions
 
 load_input(FileName) ->
     InputRaw = aoc_input_app:read_file_lines(FileName, [remove_line_breaks, split_lines_into_words]),
