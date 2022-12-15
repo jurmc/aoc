@@ -12,8 +12,15 @@ part1(FileName) ->
     TailPositions = apply_t_moves(HeadPositions),
     sets:size(sets:from_list(TailPositions)).
 
-part2(_FileName) ->
-    ok.
+%% TODO: Knots number should be parametrized
+part2(FileName) ->
+    NumKnots = 10,
+    FinalTailPositions = lists:foldl(fun(Idx, TailPositions) ->
+                                             apply_t_moves(TailPositions)
+                                     end,
+                                     apply_h_moves(load_input(FileName)),
+                                     lists:seq(1,NumKnots-1)),
+    sets:size(sets:from_list(FinalTailPositions)).
 
 %%% Internal functions
 
@@ -70,6 +77,14 @@ apply_t_move({Hx,Hy},{Tx,Ty}) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
+part1_test() ->
+    ?assertEqual(13, part1("test_input_day09.txt")),
+    ?assertEqual(6026, part1("input_day09.txt")).
+
+part2_test() ->
+    ?assertEqual(1, part2("test_input_day09.txt")),
+    ?assertEqual(2273, part2("input_day09.txt")).
+
 apply_h_move_test() ->
     ?assertEqual({2,1}, apply_h_move({1,1}, {"R"})),
     ?assertEqual({2,2}, apply_h_move({2,1}, {"U"})),
@@ -93,42 +108,6 @@ apply_t_move_test() ->
     ?assertEqual({2,2}, apply_t_move({2,3}, {1,1})),
     ?assertEqual({2,2}, apply_t_move({3,2}, {1,1})),
     ?assertEqual({2,3}, apply_t_move({2,2}, {3,4})).
-
-part1_test() ->
-    ?assertEqual(13, part1("test_input_day09.txt")),
-    ?assertEqual(6026, part1("input_day09.txt")).
-
-part2_1_test() ->
-    FileName = "test_input_day09.txt",
-    HeadPositions = apply_h_moves(load_input(FileName)),
-    TailPositions1 = apply_t_moves(HeadPositions),
-    TailPositions2 = apply_t_moves(TailPositions1),
-    TailPositions3 = apply_t_moves(TailPositions2),
-    TailPositions4 = apply_t_moves(TailPositions3),
-    TailPositions5 = apply_t_moves(TailPositions4),
-    TailPositions6 = apply_t_moves(TailPositions5),
-    TailPositions7 = apply_t_moves(TailPositions6),
-    TailPositions8 = apply_t_moves(TailPositions7),
-    TailPositions9 = apply_t_moves(TailPositions8),
-
-    Result = sets:size(sets:from_list(TailPositions9)),
-    ?debugFmt("Test result: ~p~n", [Result]).
-
-part2_2_test() ->
-    FileName = "input_day09.txt",
-    HeadPositions = apply_h_moves(load_input(FileName)),
-    TailPositions1 = apply_t_moves(HeadPositions),
-    TailPositions2 = apply_t_moves(TailPositions1),
-    TailPositions3 = apply_t_moves(TailPositions2),
-    TailPositions4 = apply_t_moves(TailPositions3),
-    TailPositions5 = apply_t_moves(TailPositions4),
-    TailPositions6 = apply_t_moves(TailPositions5),
-    TailPositions7 = apply_t_moves(TailPositions6),
-    TailPositions8 = apply_t_moves(TailPositions7),
-    TailPositions9 = apply_t_moves(TailPositions8),
-
-    Result = sets:size(sets:from_list(TailPositions9)),
-    ?debugFmt("Result: ~p~n", [Result]).
 
 -endif.
 
