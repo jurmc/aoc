@@ -5,17 +5,17 @@
 %%% Exported functions
 
 part1(FileName) ->
-    length(filter_overlapped(read_input(FileName), fun overlap/2)).
+    length(filter_overlapped(load_input(FileName), fun overlap/2)).
 
 part2(FileName) ->
-    length(filter_overlapped(read_input(FileName), fun partial_overlap/2)).
+    length(filter_overlapped(load_input(FileName), fun partial_overlap/2)).
 
 %%% Internal functions
 
 filter_overlapped(List, FilterFun) -> lists:filter(fun({R1, R2}) -> FilterFun(R1, R2) end, List).
 
-read_input(FileName) ->
-    Lines = aoc_input_app:read_file_lines(FileName),
+load_input(FileName) ->
+    Lines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
     lists:map(fun process_input_line/1, Lines).
 
 overlap({L1, U1}, {L2, U2}) when L1 >= L2, U1 =< U2 -> true;
@@ -60,9 +60,9 @@ filter_overlapped_test() ->
 process_input_line_test() ->
     ?assertEqual({{2,4},{6,8}}, process_input_line("2-4,6-8")).
 
-read_input_test() ->
+load_input_test() ->
     ExpectedInput =  [{{2, 4}, {6, 8}}, {{2, 3}, {4, 5}}, {{5, 7}, {7, 9}}, {{2, 8}, {3, 7}}, {{6, 6}, {4, 6}}, {{2, 6}, {4, 8}}],
-    ?assertEqual(ExpectedInput, read_input("test_input_day04.txt")).
+    ?assertEqual(ExpectedInput, load_input("test_input_day04.txt")).
 
 part1_test() ->
     ?assertEqual(2, part1("test_input_day04.txt")),

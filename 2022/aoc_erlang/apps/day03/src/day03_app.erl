@@ -5,14 +5,16 @@
 %%% Exported functions
 
 part1(FileName) ->
-    sum_priorities(aoc_input_app:read_file_lines(FileName)).
+    sum_priorities(load_input(FileName)).
 
 part2(FileName) ->
-    InList = aoc_input_app:read_file_lines(FileName),
-    Groups = group_input(InList),
+    Groups = group_input(load_input(FileName)),
     sum_priorities_for_groups(Groups).
 
 %%% Internal functions
+
+load_input(FileName) ->
+    aoc_input_app:read_file_lines(FileName, [remove_line_breaks]).
 
 sum_priorities(InList) ->
     Priorities = lists:map(fun(Line) -> item_to_priority(shared_item(Line)) end, InList),
@@ -76,13 +78,13 @@ item_to_priority_test() ->
     ?assertEqual(42, item_to_priority("P")).
 
 group_input_test() ->
-    InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
+    InList = load_input("test_input_day03.txt"),
     ?assertEqual([{"vJrwpWtwJgWrhcsFMMfFFhFp", "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL", "PmmdzqPrVvPwwTWBwg"},
                   {"wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn", "ttgJtRGJQctTZtZT", "CrZsJsPPZsGzwwsLwLmpwMDw"}],
                  group_input(InList)).
 
 common_char_for_group_test() ->
-    InList = aoc_input_app:read_file_lines("test_input_day03.txt"),
+    InList = load_input("test_input_day03.txt"),
     Groups = group_input(InList),
     ?assertEqual(18, priority_for_group(lists:nth(1, Groups))),
     ?assertEqual(52, priority_for_group(lists:nth(2, Groups))).
