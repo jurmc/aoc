@@ -68,9 +68,11 @@ remove_empty_lines(Lines) ->
 
 %%% Internal functions
 
+%% TODO: probably to remove (we have read_file_lines with OPT now)
 file_content_into_list_of_lines(FileContent) ->
     file_content_into_list_of_lines(FileContent, []).
 
+%% TODO: probably to remove (we have read_file_lines with OPT now)
 file_content_into_list_of_lines([], Acc) -> lists:reverse(Acc);
 file_content_into_list_of_lines(FileContent, Acc) ->
     case string:split(FileContent, "\n") of
