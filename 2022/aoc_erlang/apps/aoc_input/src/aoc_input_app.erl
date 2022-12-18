@@ -16,6 +16,7 @@ read_file_lines_do_not_remove_line_breaks(FileName) ->
     {ok, FileContent} = read_file(FileName),
     read_file_lines_do_not_remove_line_breaks(binary:bin_to_list(FileContent), []).
 
+%% TODO: stupid name, use just read_file_lines (and yes, you still shouldn't remove line breaks)
 read_file_lines_do_not_remove_line_breaks([], Acc) -> lists:reverse(Acc);
 read_file_lines_do_not_remove_line_breaks(String, []) ->
     case string:split(String, "\n") of
