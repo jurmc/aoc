@@ -1,6 +1,6 @@
 -module(day11_app).
 
--record(monkey, {id, items = [], operator, operand, test, recipient_for_true, recipient_for_false}).
+-include_lib("monkey.hrl").
 
 -export([part1/1, part2/1]).
 
