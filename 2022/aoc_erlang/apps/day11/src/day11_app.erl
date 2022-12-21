@@ -9,9 +9,6 @@
 
 %%% Exported functions
 
-part1(_FileName) ->
-    ok.
-
 part2(_FileName) ->
     ok.
 
@@ -99,7 +96,7 @@ apply_n_rounds(N, Pids) ->
 first_round_test() ->
     [Pid0, Pid1, Pid2, Pid3] = Pids = start_all_monkeys("test_input_day11.txt"),
     apply_n_rounds(1, Pids),
-    dump_monkeys(Pids),
+    %%dump_monkeys(Pids),
 
     Items0 = (monkey:get_monkey(Pid0))#monkey.items,
     Items1 = (monkey:get_monkey(Pid1))#monkey.items,
@@ -113,21 +110,37 @@ first_round_test() ->
 
     [monkey:terminate(Pid) || Pid <- Pids].
 
+
+
 twenty_rounds_test() ->
     [Pid0, Pid1, Pid2, Pid3] = Pids = start_all_monkeys("test_input_day11.txt"),
     apply_n_rounds(20, Pids),
-    dump_monkeys(Pids),
+    %%dump_monkeys(Pids),
 
     Items0 = (monkey:get_monkey(Pid0))#monkey.items,
     Items1 = (monkey:get_monkey(Pid1))#monkey.items,
     Items2 = (monkey:get_monkey(Pid2))#monkey.items,
     Items3 = (monkey:get_monkey(Pid3))#monkey.items,
-
+    
     ?assertEqual([10, 12, 14, 26, 34], Items0),
     ?assertEqual([245, 93, 53, 199, 115], Items1),
     ?assertEqual([], Items2),
     ?assertEqual([], Items3),
 
+    InspectedList = [(monkey:get_monkey(Pid))#monkey.inspected|| Pid <- Pids],
+    ?assertEqual([101, 95, 7, 105], InspectedList),
+
     [monkey:terminate(Pid) || Pid <- Pids].
+
+part1(FileName) ->
+    Pids = start_all_monkeys(FileName),
+    apply_n_rounds(20, Pids),
+    [Max1,Max2|_] = lists:reverse(lists:sort([(monkey:get_monkey(Pid))#monkey.inspected|| Pid <- Pids])),
+    [monkey:terminate(Pid) || Pid <- Pids],
+    Max1*Max2.
+
+part1_test() ->
+    ?assertEqual(10605, part1("test_input_day11.txt")),
+    ?assertEqual(69918, part1("input_day11.txt")).
 
 -endif.

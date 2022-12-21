@@ -1,4 +1,5 @@
 -record(monkey, {id,
+                 inspected = 0,
                  items = [],
                  operator,
                  operand,

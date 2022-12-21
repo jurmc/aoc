@@ -10,7 +10,7 @@
 %%% Client API
 start(Monkey = #monkey{}) ->
     Pid = spawn(?MODULE, init, [Monkey]),
-    ?debugFmt("Monkey started: Id ~p, Pid: ~p", [Monkey#monkey.id, Pid]),
+    %%?debugFmt("Monkey started: Id ~p, Pid: ~p", [Monkey#monkey.id, Pid]),
     register(get_reg_name(Monkey#monkey.id), Pid),
     Pid.
 
@@ -71,12 +71,12 @@ get_reg_name(Id) ->
     list_to_atom(io_lib:format("monkey_~B", [Id])).
 
 inspect_item(#monkey{items = []} = Monkey) -> Monkey;
-inspect_item(Monkey) ->
+inspect_item(#monkey{inspected = AlreadyInspected} = Monkey) ->
     [Item|RestItems] = Monkey#monkey.items,
-    ?debugFmt("Id: ~p -- Before WorryLevel1: Item: ~p Operand: ~p~n", [Monkey#monkey.id, Item, Monkey#monkey.operand]),
+    %%?debugFmt("Id: ~p -- Before WorryLevel1: Item: ~p Operand: ~p~n", [Monkey#monkey.id, Item, Monkey#monkey.operand]),
     Operand = case Monkey#monkey.operand of
                   "old" ->
-                      ?debugFmt("marker~n", []),
+                      %%?debugFmt("marker~n", []),
                       Item;
                   _ -> Monkey#monkey.operand
               end,
@@ -84,19 +84,19 @@ inspect_item(Monkey) ->
                       "+" -> Item + Operand;
                       "*" -> Item * Operand;
                       UnhandledOperand ->
-                          ?debugFmt("Unhandled operand: ~p~n", UnhandledOperand),
+                          %%?debugFmt("Unhandled operand: ~p~n", UnhandledOperand),
                           exit("Unhandled operand")
                   end,
     WorryLevel2 = erlang:trunc(WorryLevel1 / 3),
-    ?debugFmt("WorryLevel1: ~p WorryLevel2: ~p~n", [WorryLevel1, WorryLevel2]),
+    %%?debugFmt("WorryLevel1: ~p WorryLevel2: ~p~n", [WorryLevel1, WorryLevel2]),
     case (WorryLevel2 rem Monkey#monkey.test) of
         0 -> send_to_monkey(Monkey#monkey.recipient_for_true, WorryLevel2);
         _ -> send_to_monkey(Monkey#monkey.recipient_for_false, WorryLevel2)
     end,
-    inspect_item(Monkey#monkey{items=RestItems}).
+    inspect_item(Monkey#monkey{items=RestItems, inspected=AlreadyInspected+1}).
 
 send_to_monkey(RecipientId, Item) ->
-    ?debugFmt("Sending Item: ~p, to monkey: ~p~n", [Item, RecipientId]),
+    %%?debugFmt("Sending Item: ~p, to monkey: ~p~n", [Item, RecipientId]),
     monkey:send_item(get_reg_name(RecipientId), Item).
 
 %%% Unit tests
@@ -148,7 +148,8 @@ take_turn_test() ->
     take_turn(Pid2),
     ExpectedMonkey1 = Monkey1#monkey{items=[2080]},
     ExpectedMonkey3 = Monkey3#monkey{items=[200, 1200, 3136]},
-    %%?assertEqual(ExpectedMonkey1, monkey:get_monkey(Pid1)),
+    ?assertEqual(3, (monkey:get_monkey(Pid2))#monkey.inspected),
+    ?assertEqual(ExpectedMonkey1, monkey:get_monkey(Pid1)),
     ?assertEqual(ExpectedMonkey3, monkey:get_monkey(Pid3)),
 
     terminate(Pid1),
