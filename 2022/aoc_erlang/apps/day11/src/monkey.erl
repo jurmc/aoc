@@ -5,13 +5,20 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--export([start/1, init/1, take_turn/1, get_monkey/1, send_item/2]).
+-export([start/1, terminate/1, init/1, take_turn/1, get_monkey/1, send_item/2]).
 
 %%% Client API
 start(Monkey = #monkey{}) ->
     Pid = spawn(?MODULE, init, [Monkey]),
+    ?debugFmt("Monkey started: Id ~p, Pid: ~p", [Monkey#monkey.id, Pid]),
     register(get_reg_name(Monkey#monkey.id), Pid),
     Pid.
+
+terminate(Pid) ->
+    Monkey = get_monkey(Pid),
+    unregister(get_reg_name(Monkey#monkey.id)),
+    erlang:exit(Pid, "terminate"),
+    ok.
 
 take_turn(Pid) ->
     From = {self(), make_ref()},
@@ -66,18 +73,30 @@ get_reg_name(Id) ->
 inspect_item(#monkey{items = []} = Monkey) -> Monkey;
 inspect_item(Monkey) ->
     [Item|RestItems] = Monkey#monkey.items,
+    ?debugFmt("Id: ~p -- Before WorryLevel1: Item: ~p Operand: ~p~n", [Monkey#monkey.id, Item, Monkey#monkey.operand]),
+    Operand = case Monkey#monkey.operand of
+                  "old" ->
+                      ?debugFmt("marker~n", []),
+                      Item;
+                  _ -> Monkey#monkey.operand
+              end,
     WorryLevel1 = case Monkey#monkey.operator of
-                      "+" -> Item + Monkey#monkey.operand;
-                      "*" -> Item * Monkey#monkey.operand
+                      "+" -> Item + Operand;
+                      "*" -> Item * Operand;
+                      UnhandledOperand ->
+                          ?debugFmt("Unhandled operand: ~p~n", UnhandledOperand),
+                          exit("Unhandled operand")
                   end,
     WorryLevel2 = erlang:trunc(WorryLevel1 / 3),
-    case WorryLevel2 rem 23 of
-        1 -> send_to_monkey(Monkey#monkey.recipient_for_true, WorryLevel2);
+    ?debugFmt("WorryLevel1: ~p WorryLevel2: ~p~n", [WorryLevel1, WorryLevel2]),
+    case (WorryLevel2 rem Monkey#monkey.test) of
+        0 -> send_to_monkey(Monkey#monkey.recipient_for_true, WorryLevel2);
         _ -> send_to_monkey(Monkey#monkey.recipient_for_false, WorryLevel2)
     end,
     inspect_item(Monkey#monkey{items=RestItems}).
 
 send_to_monkey(RecipientId, Item) ->
+    ?debugFmt("Sending Item: ~p, to monkey: ~p~n", [Item, RecipientId]),
     monkey:send_item(get_reg_name(RecipientId), Item).
 
 %%% Unit tests
@@ -85,22 +104,22 @@ send_to_monkey(RecipientId, Item) ->
 %-ifdef(TEST).
 %-include_lib("eunit/include/eunit.hrl").
 
--define(TEST_MONKEY_0, #monkey{
-                          id = 0,
-                          items = [79, 98],
+-define(TEST_MONKEY_1, #monkey{
+                          id = 1,
+                          items = [],
                           operator = "*",
-                          operand = 19,
-                          test = 23,
-                          recipient_for_true = 2,
+                          operand = "old",
+                          test = 13,
+                          recipient_for_true = 1,
                           recipient_for_false = 3}).
 
 -define(TEST_MONKEY_2, #monkey{
                           id = 2,
-                          items = [],
+                          items = [79, 60, 97],
                           operator = "*",
-                          operand = 19,
-                          test = 23,
-                          recipient_for_true = 2,
+                          operand = "old",
+                          test = 13,
+                          recipient_for_true = 1,
                           recipient_for_false = 3}).
 
 -define(TEST_MONKEY_3, #monkey{
@@ -108,31 +127,42 @@ send_to_monkey(RecipientId, Item) ->
                           items = [200],
                           operator = "*",
                           operand = 19,
-                          test = 23,
+                          test = 13,
                           recipient_for_true = 2,
                           recipient_for_false = 3}).
 
 get_monkey_test() ->
-    Monkey = ?TEST_MONKEY_0,
+    Monkey = ?TEST_MONKEY_1,
     Pid = start(Monkey),
     ?assertEqual(Monkey, monkey:get_monkey(Pid)),
-    exit(Pid, exit).
+    terminate(Pid).
 
 take_turn_test() ->
-    Monkey0 = ?TEST_MONKEY_0,
+    Monkey1 = ?TEST_MONKEY_1,
     Monkey2 = ?TEST_MONKEY_2,
     Monkey3 = ?TEST_MONKEY_3,
-    Pid0 = start(Monkey0),
+    Pid1 = start(Monkey1),
     Pid2 = start(Monkey2),
     Pid3 = start(Monkey3),
 
-    take_turn(Pid0),
-    ExpectedMonkey2 = Monkey2,
-    ExpectedMonkey3 = Monkey3#monkey{items=[200, 500, 620]},
-    ?assertEqual(ExpectedMonkey2, monkey:get_monkey(Pid2)),
+    take_turn(Pid2),
+    ExpectedMonkey1 = Monkey1#monkey{items=[2080]},
+    ExpectedMonkey3 = Monkey3#monkey{items=[200, 1200, 3136]},
+    %%?assertEqual(ExpectedMonkey1, monkey:get_monkey(Pid1)),
     ?assertEqual(ExpectedMonkey3, monkey:get_monkey(Pid3)),
-    exit(Pid0, exit),
-    exit(Pid2, exit),
-    exit(Pid3, exit).
+
+    terminate(Pid1),
+    terminate(Pid2),
+    terminate(Pid3).
+
+terminate_test() ->
+    Monkey = ?TEST_MONKEY_1,
+    Pid = start(Monkey),
+    Registerd1 = registered(),
+    ?assertEqual(true, lists:member(monkey_1, Registerd1)),
+
+    terminate(Pid),
+    Registerd2 = registered(),
+    ?assertEqual(false, lists:member("monkey_1", Registerd2)).
 
 -endif.

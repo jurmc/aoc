@@ -1,5 +1,8 @@
 -module(day11_app).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
 -include_lib("monkey.hrl").
 
 -export([part1/1, part2/1]).
@@ -14,10 +17,18 @@ part2(_FileName) ->
 
 %%% Internal functions
 
+dump_monkeys(Pids) ->
+    lists:foreach(fun(Pid) ->
+                    Monkey = monkey:get_monkey(Pid),
+                    ?debugFmt("Monkey: ~n~p~n------------------------", [Monkey])
+            end,
+            Pids).
+            
+
 %%% Unit tests
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
+%%-ifdef(TEST).
+%%-include_lib("eunit/include/eunit.hrl").
 
 read_monkey([SectMonkeyId,SectItems,SectOperation,SectTest,SectRecipientTrue,SectRecipientFalse|T]) ->
     ["Monkey", Id] = SectMonkeyId,
@@ -28,12 +39,15 @@ read_monkey([SectMonkeyId,SectItems,SectOperation,SectTest,SectRecipientTrue,Sec
     ["If", "false:", "throw", "to", "monkey", RecipientFalse] = SectRecipientFalse,
 
     Monkey = #monkey{id                      = element(1, string:to_integer(Id)),
-            items                   = [element(1, string:to_integer(Item)) || Item <- Items],
+            items                  = [element(1, string:to_integer(Item)) || Item <- Items],
             operator               = Operator,
-            operand                = element(1, string:to_integer(Operand)),
-            test                    = element(1, string:to_integer(Test)),
-            recipient_for_true      = element(1, string:to_integer(RecipientTrue)),
-            recipient_for_false     = element(1, string:to_integer(RecipientFalse))},
+            operand                = case Operand of
+                                         "old" -> "old";
+                                         _ -> element(1, string:to_integer(Operand))
+                                     end,
+            test                   = element(1, string:to_integer(Test)),
+            recipient_for_true     = element(1, string:to_integer(RecipientTrue)),
+            recipient_for_false    = element(1, string:to_integer(RecipientFalse))},
     [Monkey, T]. 
 
 read_monkeys(FileName) -> 
@@ -67,5 +81,53 @@ monkey_read_test() ->
                             recipient_for_true = 0,
                             recipient_for_false = 1},
     ?assertEqual(ExpectedLastMonkey, LastMonkey).
+
+start_all_monkeys(FileName) ->
+    MonkeysRecords = read_monkeys(FileName),
+    [monkey:start(MonkeyRecord) || MonkeyRecord <- MonkeysRecords].
+
+start_all_monkeys_test() ->
+    Pids = start_all_monkeys("test_input_day11.txt"),
+    ?assertEqual([true, true, true, true], [is_pid(Pid) || Pid <- Pids]),
+    [monkey:terminate(Pid) || Pid <- Pids].
+
+apply_n_rounds(0, Pids) -> Pids;
+apply_n_rounds(N, Pids) ->
+    [monkey:take_turn(Pid) || Pid <- Pids],
+    apply_n_rounds(N-1, Pids).
+
+first_round_test() ->
+    [Pid0, Pid1, Pid2, Pid3] = Pids = start_all_monkeys("test_input_day11.txt"),
+    apply_n_rounds(1, Pids),
+    dump_monkeys(Pids),
+
+    Items0 = (monkey:get_monkey(Pid0))#monkey.items,
+    Items1 = (monkey:get_monkey(Pid1))#monkey.items,
+    Items2 = (monkey:get_monkey(Pid2))#monkey.items,
+    Items3 = (monkey:get_monkey(Pid3))#monkey.items,
+
+    ?assertEqual([20, 23, 27, 26], Items0),
+    ?assertEqual([2080, 25, 167, 207, 401, 1046], Items1),
+    ?assertEqual([], Items2),
+    ?assertEqual([], Items3),
+
+    [monkey:terminate(Pid) || Pid <- Pids].
+
+twenty_rounds_test() ->
+    [Pid0, Pid1, Pid2, Pid3] = Pids = start_all_monkeys("test_input_day11.txt"),
+    apply_n_rounds(20, Pids),
+    dump_monkeys(Pids),
+
+    Items0 = (monkey:get_monkey(Pid0))#monkey.items,
+    Items1 = (monkey:get_monkey(Pid1))#monkey.items,
+    Items2 = (monkey:get_monkey(Pid2))#monkey.items,
+    Items3 = (monkey:get_monkey(Pid3))#monkey.items,
+
+    ?assertEqual([10, 12, 14, 26, 34], Items0),
+    ?assertEqual([245, 93, 53, 199, 115], Items1),
+    ?assertEqual([], Items2),
+    ?assertEqual([], Items3),
+
+    [monkey:terminate(Pid) || Pid <- Pids].
 
 -endif.
