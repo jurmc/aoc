@@ -1,50 +1,17 @@
 -module(aoc_input_app).
 
--define(NEWLINE, 10).
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
--export([read_file/1, read_file_lines/1, read_file_lines/2, read_file_lines_do_not_remove_line_breaks/1, read_file_lines2/1, read_file_lines_into_2_columns/1, remove_empty_lines/1]).
+-export([read_file/1, read_file_lines/1, read_file_lines/2, read_file_lines2/1, read_file_lines_into_2_columns/1, remove_empty_lines/1]).
 
 %%% Reading files
 
 read_file(FileName) ->
     file:read_file(os:getenv("AOC_INPUT") ++ "/" ++ FileName).
 
-read_file_lines_do_not_remove_line_breaks(FileName) ->
-    {ok, FileContent} = read_file(FileName),
-    read_file_lines_do_not_remove_line_breaks(binary:bin_to_list(FileContent), []).
-
-%% TODO: stupid name, use just read_file_lines (and yes, you still shouldn't remove line breaks)
-read_file_lines_do_not_remove_line_breaks([], Acc) -> lists:reverse(Acc);
-read_file_lines_do_not_remove_line_breaks(String, []) ->
-    case string:split(String, "\n") of
-        [[], RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[]]);
-        [Line, RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[],Line]);
-        [Line] -> Line
-    end;
-read_file_lines_do_not_remove_line_breaks(String, Acc) ->
-    case string:split(String, "\n") of
-        [[], RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[]|Acc]);
-        [Line, RestLines] -> read_file_lines_do_not_remove_line_breaks(RestLines, [[],Line|Acc]);
-        [Line] -> [Line|Acc]
-    end.
-
-process_opts(Lines, []) -> Lines;
-process_opts(Lines, [Opt|Opts]) ->
-    case Opt of
-        remove_line_breaks -> process_opts(lists:filter(fun(Line) -> Line =/= [] end, Lines), Opts);
-        split_lines_into_words -> process_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
-        split_lines_into_characters -> Lines; %% TODO not_implementedprocess_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
-        _ -> exit({"Not supported option", Opt})
-    end.
-
 read_file_lines(FileName) ->
     read_file_lines(FileName, []).
 
 read_file_lines(FileName, Opts) ->
-    InLines = read_file_lines_do_not_remove_line_breaks(FileName),
+    InLines = read_file_lines_raw(FileName),
     process_opts(InLines, Opts).
 
 %% TODO: Merge it with read_file_lines (above)
@@ -81,8 +48,37 @@ file_content_into_list_of_lines(FileContent, Acc) ->
         [Line] -> file_content_into_list_of_lines([], [Line|Acc])
     end.
 
-%%-ifdef(TEST).
-%%-include_lib("eunit/include/eunit.hrl").
+read_file_lines_raw(FileName) ->
+    {ok, FileContent} = read_file(FileName),
+    read_file_lines_raw(binary:bin_to_list(FileContent), []).
+
+process_opts(Lines, []) -> Lines;
+process_opts(Lines, [Opt|Opts]) ->
+    case Opt of
+        remove_line_breaks -> process_opts(lists:filter(fun(Line) -> Line =/= [] end, Lines), Opts);
+        split_lines_into_words -> process_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
+        split_lines_into_characters -> Lines; %% TODO not_implementedprocess_opts(lists:map(fun(Line) -> string:tokens(Line, " ") end, Lines), Opts);
+        _ -> exit({"Not supported option", Opt})
+    end.
+
+%% TODO: stupid name, use just read_file_lines (and yes, you still shouldn't remove line breaks)
+%%       prposed new neame: read_file_lines_raq (?)
+read_file_lines_raw([], Acc) -> lists:reverse(Acc);
+read_file_lines_raw(String, []) ->
+    case string:split(String, "\n") of
+        [[], RestLines] -> read_file_lines_raw(RestLines, [[]]);
+        [Line, RestLines] -> read_file_lines_raw(RestLines, [[],Line]);
+        [Line] -> Line
+    end;
+read_file_lines_raw(String, Acc) ->
+    case string:split(String, "\n") of
+        [[], RestLines] -> read_file_lines_raw(RestLines, [[]|Acc]);
+        [Line, RestLines] -> read_file_lines_raw(RestLines, [[],Line|Acc]);
+        [Line] -> [Line|Acc]
+    end.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 file_content_into_list_of_lines_test() ->
     ?assertEqual([[], "ab", [], "cd", "ef"], file_content_into_list_of_lines("\nab\n\ncd\nef\n")),
@@ -109,7 +105,14 @@ read_file_lines_do_not_remove_line_breaks_test() ->
                   [],
                   "10000", []
                  ],
-                 read_file_lines_do_not_remove_line_breaks(FileName)).
+                 read_file_lines_raw(FileName)).
+
+%%removal_read_file_lines2_test() -> %% TODO: Temporary test
+%%    Out1 = read_file_lines2("test_input_day05.txt"),
+%%    Out2 = read_file_lines("test_input_day05.txt"),
+%%    ?assertEqual(Out1, Out2),
+%%
+%%    read_file_lines2("input_day05.txt").
 
 -endif.
 

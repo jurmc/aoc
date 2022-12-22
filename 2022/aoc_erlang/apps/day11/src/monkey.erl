@@ -1,5 +1,7 @@
 -module(monkey).
 
+%%% TODO: use gen_statem
+
 -include_lib("monkey.hrl").
 
 -ifdef(TEST).
