@@ -83,12 +83,13 @@ inspect_item(#monkey{inspected = AlreadyInspected} = Monkey) ->
     WorryLevel1 = case Monkey#monkey.operator of
                       "+" -> Item + Operand;
                       "*" -> Item * Operand;
-                      UnhandledOperand ->
-                          %%?debugFmt("Unhandled operand: ~p~n", UnhandledOperand),
+                      _UnhandledOperand ->
                           exit("Unhandled operand")
                   end,
-    WorryLevel2 = erlang:trunc(WorryLevel1 / 3),
-    %%?debugFmt("WorryLevel1: ~p WorryLevel2: ~p~n", [WorryLevel1, WorryLevel2]),
+    WorryLevel2 = case Monkey#monkey.worry_level_postproc of
+                      undefined -> erlang:trunc(WorryLevel1 / 3); 
+                      _ -> (Monkey#monkey.worry_level_postproc)(WorryLevel1)
+                  end,
     case (WorryLevel2 rem Monkey#monkey.test) of
         0 -> send_to_monkey(Monkey#monkey.recipient_for_true, WorryLevel2);
         _ -> send_to_monkey(Monkey#monkey.recipient_for_false, WorryLevel2)
