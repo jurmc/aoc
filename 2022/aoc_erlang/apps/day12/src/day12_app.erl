@@ -40,8 +40,8 @@ load_input(FileName) ->
                              [],
                              LinesWithY),
     {Begin, End} = get_ends(CoordsList),
-    HeightMatrix = normalize_height(CoordsList),
-    {Begin, End, HeightMatrix}.
+    NormalizedCoordsList = normalize_height(CoordsList),
+    {Begin, End, dict:from_list(NormalizedCoordsList)}.
 
 %%% Unit tests
 -ifdef(TEST).
@@ -51,5 +51,80 @@ begin_end_coords_test() ->
     {Begin, End, _} = load_input("test_input_day12.txt"),
     ?assertEqual({1, 1}, Begin),
     ?assertEqual({6, 3}, End).
+
+normalize_height_test() ->
+    InputList = [{{1,1}, $a},
+                 {{2,1}, $b},
+                 {{1,2}, $c},
+                 {{2,2}, $c}],
+    ExpectedList = [{{1,1}, 0},
+                    {{2,1}, 1},
+                    {{1,2}, 2},
+                    {{2,2}, 2}],
+    ?assertEqual(ExpectedList, normalize_height(InputList)).
+
+filter_directions({X, Y}, PotentialDirections, HeightMap, CurrPath) ->
+    %% Do not go over map edge
+    F1 = lists:filter(fun({X2,Y2}) ->
+                              dict:is_key({X2,Y2}, HeightMap)
+                      end,
+                      PotentialDirections),
+    %% Do not go to a field that is already in our path
+    F2 = lists:filter(fun(Position) -> not lists:member(Position, CurrPath) end, F1).
+    %% TODO: apply rules imposed by the part1 logic (do not step onto filed that is too high
+
+
+filter_directions_test() ->
+    {X,Y} = {1,1},
+    HeightMap = dict:from_list([{{1,1}, 0},
+                             {{2,1}, 1},
+                             {{1,2}, 2},
+                             {{2,2}, 2}]),
+    PotentialDirections = [{X+1, Y},
+                           {X-1, Y},
+                           {X, Y+1},
+                           {X, Y-1}],
+    CurrPath = [{X, Y+1}],
+    AllowedDirections = [{X+1, Y}],
+    ?assertEqual(AllowedDirections, filter_directions({X, Y}, PotentialDirections, HeightMap, CurrPath)).
+
+get_paths(Begin, End, HeightMap) ->
+    get_paths(Begin, End, HeightMap, {[Begin], []}, 0).
+
+get_paths(BeginEqualToEnd, BeginEqualToEnd, _HeightMap, _Acc = {CurrPath, OtherPaths}, Depth) ->
+    ?debugFmt("get_paths clause1~n", []),
+    {[], [lists:reverse(CurrPath)|OtherPaths]};
+get_paths(Begin, End, _HeightMap, _Acc = {CurrPath, OtherPaths}, 2) ->
+    ?debugFmt("get_paths clause2~n", []),
+    {[], [lists:reverse(CurrPath)|OtherPaths]};
+get_paths(Begin = {X1, Y1}, End = {X2, Y2}, HeightMap, Acc = {CurrPath, _OtherPaths}, Depth) ->
+    ?debugFmt("Begin: ~p, End: ~p, Acc: ~p~n", [Begin, End, Acc]),
+    PotentialDirections = [{X1+1, Y1},
+                           {X1-1, Y1},
+                           {X1, Y1+1},
+                           {X1, Y1-1}],
+    FilteredDirections = filter_directions(Begin, PotentialDirections, HeightMap, CurrPath), %% TODO: I bet this part will have to be adapted somehow for part2 :)
+    lists:foldl(fun(NewPositon, {_, OtherPaths}) ->
+                        ?debugFmt("NewPositon: ~p, End: ~p, CurrPath: ~p, OtherPaths: ~p, Depth: ~p", [NewPositon, End, CurrPath, OtherPaths, Depth]),
+                        %%Out = get_paths(NewPositon, End, HeightMap, {[NewPositon|CurrPath], OtherPaths}, Depth+1),
+                        Out = get_paths(NewPositon, End, HeightMap, {[NewPositon|CurrPath], OtherPaths}, Depth),
+                        ?debugFmt("Out: ~p~n", [Out]),
+                        Out
+                end,
+                Acc,
+                FilteredDirections).
+
+get_paths_test() ->
+    Begin = {1,1},
+    End = {2,2},
+    HeightMap = dict:from_list([{{1,1}, 0},
+                             {{2,1}, 1},
+                             {{1,2}, 2},
+                             {{2,2}, 2}]),
+    Paths = get_paths(Begin, End, HeightMap),
+    ?debugFmt("Paths: ~n~p~n", [Paths]),
+    %%ExpectedPaths = dict:from_list([{1,1}, {2,1}, {2,2}]),
+    %%?assertEqual(ExpectedPaths, ).
+    ok.
 
 -endif.
