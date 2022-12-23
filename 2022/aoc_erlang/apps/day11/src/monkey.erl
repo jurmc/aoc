@@ -1,71 +1,49 @@
 -module(monkey).
-
-%%% TODO: use gen_statem
+-behaviour(gen_server).
 
 -include_lib("monkey.hrl").
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
--export([start/1, terminate/1, init/1, take_turn/1, get_monkey/1, send_item/2]).
+-export([start/1, terminate/1, take_turn/1, get_monkey/1, send_item/2]).
+-export([init/1, handle_call/3, handle_cast/2, terminate/2]).
 
 %%% Client API
 start(Monkey = #monkey{}) ->
-    Pid = spawn(?MODULE, init, [Monkey]),
-    %%?debugFmt("Monkey started: Id ~p, Pid: ~p", [Monkey#monkey.id, Pid]),
-    register(get_reg_name(Monkey#monkey.id), Pid),
+    ServName = {local, get_reg_name(Monkey#monkey.id)},
+    {ok, Pid} = gen_server:start(ServName, ?MODULE, Monkey, []),
     Pid.
 
 terminate(Pid) ->
-    Monkey = get_monkey(Pid),
-    unregister(get_reg_name(Monkey#monkey.id)),
-    erlang:exit(Pid, "terminate"),
-    ok.
+    gen_server:call(Pid, terminate).
 
 take_turn(Pid) ->
-    From = {self(), make_ref()},
-    Pid ! {From, take_turn},
-    receive
-        {From, take_turn_done} -> ok
-    after 5000 ->
-              erlang:error(timout)
-    end.
+    gen_server:call(Pid, take_turn).
 
 get_monkey(Pid) ->
-    From = {self(), make_ref()},
-    Pid ! {From, get_monkey},
-    receive
-        {From, Monkey} -> Monkey
-    after 5000 ->
-              erlang:error(timout)
-    end.
+    gen_server:call(Pid, get_monkey).
 
 send_item(Pid, Item) ->
-    From = {self(), make_ref()},
-    Pid ! {From, item, Item},
-    receive
-        {From, ok} -> ok
-    end.
+    gen_server:call(Pid, {item, Item}).
 
 %%% Server functions
 
 init(Monkey = #monkey{}) ->
-    loop(Monkey).
+    {ok, Monkey}.
 
-loop(Monkey) ->
-    receive
-        {{Pid, _Ref} = From, take_turn} ->
-            NewMonkey = inspect_item(Monkey),
-            Pid ! {From, take_turn_done},
-            loop(NewMonkey);
-        {{Pid, _Ref} = From, get_monkey} ->
-            Pid ! {From, Monkey},
-            loop(Monkey);
-        {{Pid, _Ref} = From, item, Item} ->
-            Pid ! {From, ok},
-            NewItems = Monkey#monkey.items ++ [Item],
-            loop(Monkey#monkey{items = NewItems})
-    end.
+handle_call(take_turn, _From, Monkey) ->
+    {reply, ok, inspect_item(Monkey)};
+handle_call(get_monkey, _From, Monkey) ->
+    {reply, Monkey, Monkey};
+handle_call({item, Item}, _From, Monkey = #monkey{items = Items}) ->
+    {reply, ok, Monkey#monkey{items = Items ++ [Item]}};
+handle_call(terminate, _From, Monkey) ->
+    {stop, normal, ok, Monkey}.
+
+handle_cast(Msg, Monkey) ->
+    io:format("Unexpected message (~p) received (in state ~p)~n", [Msg, Monkey]),
+    {noreply, Monkey}.
+
+terminate(normal, _Monkey) ->
+    ok.
 
 %%% Private functions
 
@@ -75,10 +53,8 @@ get_reg_name(Id) ->
 inspect_item(#monkey{items = []} = Monkey) -> Monkey;
 inspect_item(#monkey{inspected = AlreadyInspected} = Monkey) ->
     [Item|RestItems] = Monkey#monkey.items,
-    %%?debugFmt("Id: ~p -- Before WorryLevel1: Item: ~p Operand: ~p~n", [Monkey#monkey.id, Item, Monkey#monkey.operand]),
     Operand = case Monkey#monkey.operand of
                   "old" ->
-                      %%?debugFmt("marker~n", []),
                       Item;
                   _ -> Monkey#monkey.operand
               end,
@@ -89,7 +65,7 @@ inspect_item(#monkey{inspected = AlreadyInspected} = Monkey) ->
                           exit("Unhandled operand")
                   end,
     WorryLevel2 = case Monkey#monkey.worry_level_postproc of
-                      undefined -> erlang:trunc(WorryLevel1 / 3); 
+                      undefined -> erlang:trunc(WorryLevel1 / 3); %% TODO: get rid of this undefined clause
                       _ -> (Monkey#monkey.worry_level_postproc)(WorryLevel1)
                   end,
     case (WorryLevel2 rem Monkey#monkey.test) of
@@ -99,13 +75,12 @@ inspect_item(#monkey{inspected = AlreadyInspected} = Monkey) ->
     inspect_item(Monkey#monkey{items=RestItems, inspected=AlreadyInspected+1}).
 
 send_to_monkey(RecipientId, Item) ->
-    %%?debugFmt("Sending Item: ~p, to monkey: ~p~n", [Item, RecipientId]),
     monkey:send_item(get_reg_name(RecipientId), Item).
 
 %%% Unit tests
 
-%-ifdef(TEST).
-%-include_lib("eunit/include/eunit.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 -define(TEST_MONKEY_1, #monkey{
                           id = 1,
