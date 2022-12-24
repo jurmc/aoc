@@ -1,5 +1,7 @@
 -module(day12_app).
 
+-record(matrix, {max_x, max_y, coords}).
+
 %%-export([part1/1, part2/1]).
 -compile(export_all).
 
@@ -7,56 +9,64 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--define(UPPERCASE_S, 83).
--define(UPPERCASE_E, 69).
--define(LOWERCASE_A, 97).
-
 %%% Exported functions
 
 part2(_FileName) ->
     ok.
 
-part1(FileName) ->
-    {Begin, End, HeightMap} = load_input(FileName),
-    %%?debugFmt("Begin: ~p, End: ~p~n", [Begin, End]),
-    %%?debugFmt("HeightMap: ~n~p~n", [HeightMap]),
-    Paths = get_paths(Begin, End, HeightMap),
-    %%?debugFmt("Test paths: ~n~p~n", [Paths]),
-    lists:min([length(Path) || Path <- Paths]) - 1.
+part1(_FileName) ->
+    ok.
 
 %%% Internal functions
 
 get_ends(CoordsList) ->
-    {value, {Begin, _}} = lists:search(fun({{X, Y}, Val}) -> Val =:= ?UPPERCASE_S end, CoordsList),
-    {value, {End, _}} = lists:search(fun({{X, Y}, Val}) -> Val =:= ?UPPERCASE_E end, CoordsList),
+    {value, {Begin, _}} = lists:search(fun({_, Val}) -> Val =:= $S end, CoordsList),
+    {value, {End, _}} = lists:search(fun({_, Val}) -> Val =:= $E end, CoordsList),
     {Begin, End}.
 
+into_char(Value) ->
+    Value + $a.
+
+into_val(Char) -> %% TODO: use character literals instead of deifines
+    case Char of
+        $S -> 0;
+        $E -> 25;
+        _ -> Char - $a
+    end.
+
 normalize_height(CoordsList) ->
-    lists:map(fun({{X, Y}, Val}) ->
-                      case Val of
-                          ?UPPERCASE_S -> {{X, Y}, 0};
-                          ?UPPERCASE_E -> {{X, Y}, 25};
-                          _ -> {{X, Y}, (Val - ?LOWERCASE_A)}
-                      end
-              end,
-              CoordsList).
+    lists:map(fun({{X, Y}, Val}) -> {{X, Y}, into_val(Val)} end, CoordsList).
 
 load_input(FileName) ->
     Lines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
-    LinesWithY = [{Y, lists:nth(Y, Lines)} || Y <- lists:seq(1, length(Lines))],
+    MaxY = length(Lines),
+    MaxX = length(hd(Lines)),
+    LinesWithY = [{Y, lists:nth(Y, Lines)} || Y <- lists:seq(1, MaxY)],
     CoordsList = lists:foldl(fun({Y, Line}, Acc) ->
-                                     Acc ++ [{{X, Y}, lists:nth(X, Line)} || X <- lists:seq(1, length(Line))]
+                                     Acc ++ [{{X, Y}, lists:nth(X, Line)} || X <- lists:seq(1, MaxX)]
                              end,
                              [],
                              LinesWithY),
     {Begin, End} = get_ends(CoordsList),
     NormalizedCoordsList = normalize_height(CoordsList),
-    {Begin, End, dict:from_list(NormalizedCoordsList)}.
+    CoordsDict = dict:from_list(NormalizedCoordsList),
+    M = #matrix{max_x=MaxX, max_y=MaxY, coords=CoordsDict},
+    {Begin, End, M}.
 
-begin_end_coords_test() ->
-    {Begin, End, _} = load_input("test_input_day12.txt"),
-    ?assertEqual({1, 1}, Begin),
-    ?assertEqual({6, 3}, End).
+load_input_test() ->
+    {TestBegin, TestEnd, TestM} = load_input("test_input_day12.txt"),
+    ?assertEqual({1, 1}, TestBegin),
+    ?assertEqual({6, 3}, TestEnd),
+    ?assertEqual(8, TestM#matrix.max_x),
+    ?assertEqual(5, TestM#matrix.max_y),
+    ?assertEqual(8*5, dict:size(TestM#matrix.coords)),
+
+    {Begin, End, M} = load_input("input_day12.txt"),
+    ?assertEqual({1, 21}, Begin),
+    ?assertEqual({73, 21}, End),
+    ?assertEqual(95, M#matrix.max_x),
+    ?assertEqual(41, M#matrix.max_y),
+    ?assertEqual(95*41, dict:size(M#matrix.coords)).
 
 normalize_height_test() ->
     InputList = [{{1,1}, $a},
@@ -102,47 +112,101 @@ filter_directions_test() ->
     AllowedDirections = [{X+1, Y}],
     ?assertEqual(AllowedDirections, filter_directions({X, Y}, PotentialDirections, HeightMap, CurrPath)).
 
-get_paths(Begin, End, HeightMap) ->
-    {_, Paths} = get_paths(Begin, End, HeightMap, {[Begin], []}, 0),
-    Paths.
+print_matrix(M) ->
+    Str = lists:foldl(fun(Y, AccY) ->
+                              Line = lists:foldl(fun(X, AccX) ->
+                                                         %% ind(Key, Dict) -> {ok, Value} | error
+                                                         Val = case dict:find({X, Y}, M#matrix.coords) of
+                                                                   {ok, Value} ->
+                                                                       %%?debugFmt("Val(~p, ~p): ~p", [X, Y, Value]),
+                                                                       into_char(Value);
+                                                                   error -> $.
+                                                               end,
+                                                         [Val|AccX]
+                                                 end,
+                                                 [],
+                                                 lists:seq(1, M#matrix.max_x)),
+                              [$\n|Line] ++ AccY
+                end,
+                [],
+                lists:seq(1, M#matrix.max_y)),
+    ?debugFmt("\n" ++ lists:reverse(Str), []).
 
-get_paths(BeginEqualToEnd, BeginEqualToEnd, _HeightMap, _Acc = {CurrPath, OtherPaths}, Depth) ->
-    %%?debugFmt("get_paths clause1~n", []),
-    {[], [lists:reverse(CurrPath)|OtherPaths]};
-get_paths(Begin, End, _HeightMap, _Acc = {CurrPath, OtherPaths}, 2) ->
-    %%?debugFmt("get_paths clause2~n", []),
-    {[], [lists:reverse(CurrPath)|OtherPaths]};
-get_paths(Begin = {X1, Y1}, End = {X2, Y2}, HeightMap, Acc = {CurrPath, _OtherPaths}, Depth) ->
-    %%?debugFmt("Begin: ~p, End: ~p, Acc: ~p~n", [Begin, End, Acc]),
-    PotentialDirections = [{X1+1, Y1},
-                           {X1-1, Y1},
-                           {X1, Y1+1},
-                           {X1, Y1-1}],
-    FilteredDirections = filter_directions(Begin, PotentialDirections, HeightMap, CurrPath), %% TODO: I bet this part will have to be adapted somehow for part2 :)
-    lists:foldl(fun(NewPositon, {_, OtherPaths}) ->
-                        %%?debugFmt("NewPositon: ~p, End: ~p, CurrPath: ~p, OtherPaths: ~p, Depth: ~p", [NewPositon, End, CurrPath, OtherPaths, Depth]),
-                        %%Out = get_paths(NewPositon, End, HeightMap, {[NewPositon|CurrPath], OtherPaths}, Depth+1),
-                        Out = get_paths(NewPositon, End, HeightMap, {[NewPositon|CurrPath], OtherPaths}, Depth),
-                        %%?debugFmt("Out: ~p~n", [Out]),
-                        Out
+print_matrix_test() ->
+    {_, _, M} = load_input("test_input_day12.txt"),
+    print_matrix(M).
+
+get_isolated(Point, M) ->
+    ?debugFmt("Point: ~p~n", [Point]),
+    M#matrix{coords=get_isolated(Point, M, dict:from_list([Point]))}.
+
+get_isolated({{X, Y}, Val}, M, Acc) ->
+    NewPoints = [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}], %% TODO: use get_adjacent_for_point()
+    lists:foldl(fun({NewX, NewY}, OldAcc) ->
+                        NewAcc = case dict:find({NewX, NewY}, OldAcc) of
+                                   {ok, _} -> OldAcc; %% Point already stored in accumulator
+                                   error ->
+                                       Found = dict:find({NewX, NewY}, M#matrix.coords),
+                                       case  Found of
+                                           {ok, Val} -> get_isolated({{NewX, NewY}, Val}, M, dict:store({NewX, NewY}, Val, OldAcc));
+                                           _ -> OldAcc
+                                       end
+                               end
                 end,
                 Acc,
-                FilteredDirections).
+                NewPoints).
 
-%%get_paths_test() ->
-%%    Begin = {1,1},
-%%    End = {2,2},
-%%    HeightMap = dict:from_list([{{1,1}, 0},
-%%                             {{2,1}, 1},
-%%                             {{1,2}, 2},
-%%                             {{2,2}, 2}]),
-%%    ExpectedPaths = [[{1,1}, {2,1}, {2,2}]],
-%%    Paths = get_paths(Begin, End, HeightMap),
-%%    ?debugFmt("Paths: ~n~p~n", [Paths]),
-%%    ?assertEqual(ExpectedPaths, Paths).
+get_adjacent_for_point({X, Y}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}];
+get_adjacent_for_point({{X, Y}, _}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}].
 
-part1_test() ->
-    Result = part1("test_input_day12.txt"),
-    ?debugFmt("Result: ~p~n", [length(List) || List <- Result]).
+get_boundary(Point, M) ->
+    Isolated = get_isolated(Point, M),
+    PotentialAdjacentCords = dict:fold(fun(Point, Height, Acc) ->
+                                               lists:foldl(fun(AdjPoint, AccForList) ->
+                                                                   sets:add_element(AdjPoint, AccForList)
+                                                           end,
+                                                           Acc,
+                                                           get_adjacent_for_point(Point))
+                                       end,
+                                       sets:new(),
+                                       Isolated#matrix.coords),
+    IsolatedXY = sets:from_list([{X, Y} || {{X, Y}, _} <- dict:to_list(Isolated#matrix.coords)]),
+    PotentialMinuxIsolated = sets:to_list(sets:subtract(PotentialAdjacentCords, IsolatedXY)),
+    ?debugFmt("PotentialMinuxIsolated: ~p", [PotentialMinuxIsolated]),
+    BoundryCoords = lists:foldl(fun({X, Y}, Acc) ->
+                                        Found = dict:find({X, Y}, M#matrix.coords),
+                                        case Found of
+                                            {ok, Value} -> dict:store({X,Y}, Value, Acc);
+                                            _ -> Acc
+                                        end
+                                end,
+                                dict:new(),
+                                PotentialMinuxIsolated),
+    M#matrix{coords=BoundryCoords}.
+
+get_isolated_c_test() ->
+    {_, _, M} = load_input("test_input_day12.txt"),
+    IsolatedMatrix = get_isolated({{2,3}, 2}, M),
+    print_matrix(IsolatedMatrix),
+    ExpectedIsolatedArea = dict:from_list([{{3,2},2},{{2,3},2},{{3,3},2},{{2,4},2},{{3,4},2}]),
+    ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
+
+get_isolated_x_test() ->
+    {_, _, M} = load_input("test_input_day12.txt"),
+    IsolatedMatrix = get_isolated({{7,3},23}, M),
+    print_matrix(IsolatedMatrix),
+    ExpectedIsolatedArea = dict:from_list([{{7,3},23},{{6,2},23},{{7,2},23}]),
+    ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
+
+get_boundary_test() ->
+    {_, _, M} = load_input("test_input_day12.txt"),
+    BoundaryMatrix = get_boundary({{2,3}, 2}, M),
+    print_matrix(BoundaryMatrix),
+    ExpectedBoundaryArea = dict:from_list([{{3,1},1},
+                                           {{2,2},1},{{4,2},17},
+                                           {{1,3},0},{{4,3},18},
+                                           {{1,4},0},{{4,4},19},
+                                           {{2,5},1},{{3,5},3}]),
+    ?assertEqual(ExpectedBoundaryArea, BoundaryMatrix#matrix.coords).
 
 -endif.
