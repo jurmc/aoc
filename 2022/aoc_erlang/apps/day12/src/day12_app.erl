@@ -228,6 +228,7 @@ get_boundary_test() ->
                                            {{2,5},1},{{3,5},3}]),
     ?assertEqual(ExpectedBoundaryArea, BoundaryMatrix#matrix.coords).
 
+find_trap_area(M, []) -> none;
 find_trap_area(M, PotentialTrapPoints) ->
     {{_, _}, Level} = Point = hd(PotentialTrapPoints),
     PotentialTrapArea = get_isolated(Point, M),
