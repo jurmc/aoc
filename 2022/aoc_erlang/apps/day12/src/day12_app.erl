@@ -132,9 +132,9 @@ print_matrix(M) ->
                 lists:seq(1, M#matrix.max_y)),
     ?debugFmt("\n" ++ lists:reverse(Str), []).
 
-print_matrix_test() ->
-    {_, _, M} = load_input("test_input_day12.txt"),
-    print_matrix(M).
+%print_matrix_test() ->
+%    {_, _, M} = load_input("test_input_day12.txt"),
+%    print_matrix(M).
 
 get_isolated(Point, M) ->
     ?debugFmt("Point: ~p~n", [Point]),
@@ -156,6 +156,24 @@ get_isolated({{X, Y}, Val}, M, Acc) ->
                 Acc,
                 NewPoints).
 
+
+%% TODO: to much copy&paste below
+matrix_subtract(#matrix{} = M1, #matrix{} = M2) ->
+    XY1 = [{X,Y} || {{X,Y},_} <- dict:to_list(M1#matrix.coords)],
+    XY2 = [{X,Y} || {{X,Y},_} <- dict:to_list(M2#matrix.coords)],
+    NewXYSet = sets:subtract(
+              sets:from_list(XY1),
+              sets:from_list(XY2)),
+    NewCoords = dict:from_list([{{X,Y},dict:fetch({X,Y},M1#matrix.coords)} || {X,Y} <- sets:to_list(NewXYSet)]).
+
+points_subtract(P1, P2) ->
+    XY1 = [{X,Y} || {{X,Y},_} <- dict:to_list(P1)],
+    XY2 = [{X,Y} || {{X,Y},_} <- dict:to_list(P2)],
+    NewXYSet = sets:subtract(
+              sets:from_list(XY1),
+              sets:from_list(XY2)),
+    NewCoords = dict:from_list([{{X,Y},dict:fetch({X,Y},P1)} || {X,Y} <- sets:to_list(NewXYSet)]).
+
 get_adjacent_for_point({X, Y}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}];
 get_adjacent_for_point({{X, Y}, _}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}].
 
@@ -170,9 +188,10 @@ get_boundary(Point, M) ->
                                        end,
                                        sets:new(),
                                        Isolated#matrix.coords),
+
     IsolatedXY = sets:from_list([{X, Y} || {{X, Y}, _} <- dict:to_list(Isolated#matrix.coords)]),
     PotentialMinuxIsolated = sets:to_list(sets:subtract(PotentialAdjacentCords, IsolatedXY)),
-    ?debugFmt("PotentialMinuxIsolated: ~p", [PotentialMinuxIsolated]),
+    %%?debugFmt("PotentialMinuxIsolated: ~p", [PotentialMinuxIsolated]),
     BoundryCoords = lists:foldl(fun({X, Y}, Acc) ->
                                         Found = dict:find({X, Y}, M#matrix.coords),
                                         case Found of
@@ -187,26 +206,74 @@ get_boundary(Point, M) ->
 get_isolated_c_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
     IsolatedMatrix = get_isolated({{2,3}, 2}, M),
-    print_matrix(IsolatedMatrix),
+    %%print_matrix(IsolatedMatrix),
     ExpectedIsolatedArea = dict:from_list([{{3,2},2},{{2,3},2},{{3,3},2},{{2,4},2},{{3,4},2}]),
     ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
 
 get_isolated_x_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
     IsolatedMatrix = get_isolated({{7,3},23}, M),
-    print_matrix(IsolatedMatrix),
+    %%print_matrix(IsolatedMatrix),
     ExpectedIsolatedArea = dict:from_list([{{7,3},23},{{6,2},23},{{7,2},23}]),
     ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
 
 get_boundary_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
     BoundaryMatrix = get_boundary({{2,3}, 2}, M),
-    print_matrix(BoundaryMatrix),
+    %%print_matrix(BoundaryMatrix),
     ExpectedBoundaryArea = dict:from_list([{{3,1},1},
                                            {{2,2},1},{{4,2},17},
                                            {{1,3},0},{{4,3},18},
                                            {{1,4},0},{{4,4},19},
                                            {{2,5},1},{{3,5},3}]),
     ?assertEqual(ExpectedBoundaryArea, BoundaryMatrix#matrix.coords).
+
+find_trap_area(M, PotentialTrapPoints) ->
+    {{_, _}, Level} = Point = hd(PotentialTrapPoints),
+    PotentialTrapArea = get_isolated(Point, M),
+    %%print_matrix(PotentialTrapArea),
+    Boundary = get_boundary(Point, M),
+    %%print_matrix(Boundary).
+    %% This is trap if eveything in Boundry is more than one level higher than Level of Point
+    AreThereExits = lists:dropwhile(fun(BoundaryPoint) ->
+                                                 {{_,_}, BoundaryPointLevel} = BoundaryPoint,
+                                                 Result = (BoundaryPointLevel > Level + 1),
+                                                 %%?debugFmt("BoundaryPoint: ~p, Result: ~p", [BoundaryPoint, Result]),
+                                                 Result
+                    end,
+                    [BoundaryPoint || BoundaryPoint <- dict:to_list(Boundary#matrix.coords)]),
+    case length(AreThereExits) > 0 of
+        true ->
+            ?debugFmt("Below is not a trap", []),
+            print_matrix(PotentialTrapArea),
+            NotTrapPoints = PotentialTrapArea#matrix.coords,
+            NewPotentialTrapPoints = dict:to_list(points_subtract(dict:from_list(PotentialTrapPoints), NotTrapPoints)),
+            find_trap_area(M, NewPotentialTrapPoints);
+        false ->
+            %% This is trap, return this area
+            TrapArea = PotentialTrapArea
+    end.
+
+remove_traps(M) ->
+    LevelForTraps = 0,
+    PotentialTrapPoints = [Point || Point = {{_,_}, V} <- dict:to_list(M#matrix.coords), V =:= LevelForTraps],
+    RealTrapM = find_trap_area(M, PotentialTrapPoints),
+    case RealTrapM of
+        none -> M;
+        _ ->
+            print_matrix(RealTrapM),
+            NewM = M#matrix{coords=matrix_subtract(M, RealTrapM)},
+            print_matrix(NewM),
+            %%NewM
+            remove_traps(NewM)
+    end.
+
+remove_traps_test_() ->
+    {timeout, 20, ?_test(begin
+                             {_, _, M} = load_input("input_day12.txt"),
+                             NewM = remove_traps(M),
+                             print_matrix(NewM),
+                             true
+                         end)}.
 
 -endif.
