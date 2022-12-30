@@ -137,21 +137,20 @@ print_matrix(M, DbgMessage, DbgLine) ->
 %    print_matrix(M, "", ?LINE).
 
 get_isolated(Point, M) ->
-    ?debugFmt("Point: ~p~n", [Point]),
     M#matrix{coords=get_isolated(Point, M, dict:from_list([Point]))}.
 
 get_isolated({{X, Y}, Val}, M, Acc) ->
     NewPoints = [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}], %% TODO: use get_adjacent_for_point()
     lists:foldl(fun({NewX, NewY}, OldAcc) ->
-                        NewAcc = case dict:find({NewX, NewY}, OldAcc) of
-                                   {ok, _} -> OldAcc; %% Point already stored in accumulator
-                                   error ->
-                                       Found = dict:find({NewX, NewY}, M#matrix.coords),
-                                       case  Found of
-                                           {ok, Val} -> get_isolated({{NewX, NewY}, Val}, M, dict:store({NewX, NewY}, Val, OldAcc));
-                                           _ -> OldAcc
-                                       end
-                               end
+                        case dict:find({NewX, NewY}, OldAcc) of
+                            {ok, _} -> OldAcc; %% Point already stored in accumulator
+                            error ->
+                                Found = dict:find({NewX, NewY}, M#matrix.coords),
+                                case  Found of
+                                    {ok, Val} -> get_isolated({{NewX, NewY}, Val}, M, dict:store({NewX, NewY}, Val, OldAcc));
+                                    _ -> OldAcc
+                                end
+                        end
                 end,
                 Acc,
                 NewPoints).
@@ -164,7 +163,7 @@ matrix_subtract(#matrix{} = M1, #matrix{} = M2) ->
     NewXYSet = sets:subtract(
               sets:from_list(XY1),
               sets:from_list(XY2)),
-    NewCoords = dict:from_list([{{X,Y},dict:fetch({X,Y},M1#matrix.coords)} || {X,Y} <- sets:to_list(NewXYSet)]).
+    dict:from_list([{{X,Y},dict:fetch({X,Y},M1#matrix.coords)} || {X,Y} <- sets:to_list(NewXYSet)]).
 
 points_subtract(P1, P2) ->
     XY1 = [{X,Y} || {{X,Y},_} <- dict:to_list(P1)],
@@ -172,26 +171,25 @@ points_subtract(P1, P2) ->
     NewXYSet = sets:subtract(
               sets:from_list(XY1),
               sets:from_list(XY2)),
-    NewCoords = dict:from_list([{{X,Y},dict:fetch({X,Y},P1)} || {X,Y} <- sets:to_list(NewXYSet)]).
+    dict:from_list([{{X,Y},dict:fetch({X,Y},P1)} || {X,Y} <- sets:to_list(NewXYSet)]).
 
-get_adjacent_for_point({X, Y}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}];
-get_adjacent_for_point({{X, Y}, _}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}].
+get_adjacent_for_point({X, Y}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}].
 
 get_boundary(Point, M) ->
     Isolated = get_isolated(Point, M),
-    PotentialAdjacentCords = dict:fold(fun(Point, Height, Acc) ->
+    PotentialAdjacentCords = dict:fold(fun(PointInIsolated, _Height, Acc) ->
                                                lists:foldl(fun(AdjPoint, AccForList) ->
                                                                    sets:add_element(AdjPoint, AccForList)
                                                            end,
                                                            Acc,
-                                                           get_adjacent_for_point(Point))
+                                                           get_adjacent_for_point(PointInIsolated))
                                        end,
                                        sets:new(),
                                        Isolated#matrix.coords),
 
     IsolatedXY = sets:from_list([{X, Y} || {{X, Y}, _} <- dict:to_list(Isolated#matrix.coords)]),
-    PotentialMinuxIsolated = sets:to_list(sets:subtract(PotentialAdjacentCords, IsolatedXY)),
-    %%?debugFmt("PotentialMinuxIsolated: ~p", [PotentialMinuxIsolated]),
+    PotentialMinusIsolated = sets:to_list(sets:subtract(PotentialAdjacentCords, IsolatedXY)),
+    %%?debugFmt("PotentialMinusIsolated: ~p", [PotentialMinusIsolated]),
     BoundryCoords = lists:foldl(fun({X, Y}, Acc) ->
                                         Found = dict:find({X, Y}, M#matrix.coords),
                                         case Found of
@@ -200,7 +198,7 @@ get_boundary(Point, M) ->
                                         end
                                 end,
                                 dict:new(),
-                                PotentialMinuxIsolated),
+                                PotentialMinusIsolated),
     M#matrix{coords=BoundryCoords}.
 
 get_isolated_c_test() ->
@@ -228,26 +226,21 @@ get_boundary_test() ->
                                            {{2,5},1},{{3,5},3}]),
     ?assertEqual(ExpectedBoundaryArea, BoundaryMatrix#matrix.coords).
 
-find_trap_area(M, []) -> none;
+find_trap_area(_M, []) -> none;
 find_trap_area(M, PotentialTrapPoints) ->
     {{_, _}, Level} = Point = hd(PotentialTrapPoints),
     PotentialTrapArea = get_isolated(Point, M),
-    %%print_matrix(PotentialTrapArea, "",  ?LINE),
     Boundary = get_boundary(Point, M),
-    %%print_matrix(Boundary, "",  ?LINE).
     %% This is trap if eveything in Boundry is more than one level higher than Level of Point
     AreThereExits = lists:dropwhile(fun(BoundaryPoint) ->
                                                  {{_,_}, BoundaryPointLevel} = BoundaryPoint,
                                                  Result = (BoundaryPointLevel > Level + 1),
-                                                 %%?debugFmt("BoundaryPoint: ~p, Result: ~p", [BoundaryPoint, Result]),
                                                  Result
                     end,
                     [BoundaryPoint || BoundaryPoint <- dict:to_list(Boundary#matrix.coords)]),
     NewPotentialTrapPoints = dict:to_list(points_subtract(dict:from_list(PotentialTrapPoints), PotentialTrapArea#matrix.coords)),
     case length(AreThereExits) > 0 of
         true ->
-            ?debugFmt("Find trap debug", []),
-            print_matrix(PotentialTrapArea, "This is not a real trap", ?LINE),
             find_trap_area(M, NewPotentialTrapPoints);
         false ->
             %% This is trap, return this area
@@ -261,24 +254,40 @@ remove_traps(M) ->
     remove_traps(M, PotentialTrapPoints).
 
 remove_traps(M, PotentialTrapPoints) ->
-    LevelForTraps = 0,
     case find_trap_area(M, PotentialTrapPoints) of
         none ->
             M;
         {RealTrapM, NewPotentialTrapPoints} ->
-            print_matrix(RealTrapM, "", ?LINE),
+            %%print_matrix(RealTrapM, "", ?LINE),
             NewM = M#matrix{coords=matrix_subtract(M, RealTrapM)},
-            print_matrix(NewM, "", ?LINE),
+            %%print_matrix(NewM, "", ?LINE),
             %%NewM
             remove_traps(NewM, NewPotentialTrapPoints)
     end.
 
 remove_traps_test_() ->
     {timeout, 20, ?_test(begin
+                             {_, _, InM} = load_input("input_day12.txt"),
+                             M = remove_traps(InM),
+                             %%print_matrix(M, "", ?LINE),
+                             true
+                         end)}.
+
+find_paths(BegPoints, EndPoints, Matrix) ->
+    not_implemented.
+
+find_paths_test_() ->
+    BegPoints = [{74,21}, {75,21}],
+    EndPoints = [{73,21}],
+    ExpectedPaths = lists:sort([
+                                [{74,21}, {73,21}],
+                                [{75,21}, {74,21}, {73,21}]
+                    ]),
+    {timeout, 20, ?_test(begin
                              {_, _, M} = load_input("input_day12.txt"),
                              NewM = remove_traps(M),
                              print_matrix(NewM, "", ?LINE),
-                             true
+                             ?assertEqual(ExpectedPaths, find_paths(BegPoints, EndPoints, NewM))
                          end)}.
 
 -endif.
