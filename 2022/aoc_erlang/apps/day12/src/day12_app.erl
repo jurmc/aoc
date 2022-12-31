@@ -277,46 +277,43 @@ matrix2points_list(#matrix{coords = Coords}) ->
     %%dict:to_list(dict:map(fun({X,Y}, _Value) -> {X,Y} end, Coords)).
     lists:map(fun({Point, Level}) -> Point end, dict:to_list(Coords)).
 
-add_path(NewPath, []) ->
-    [NewPath];
-add_path(NewPath, Paths) ->
+store_shorter_path(NewPath, []) ->
+    NewPath;
+store_shorter_path(NewPath, OldPath) ->
     NewPathLen = length(NewPath),
-    CurPathLen = length(hd(Paths)),
-    case NewPathLen =:= CurPathLen of
-        true -> [NewPath|Paths];
-        _ -> case NewPathLen > CurPathLen of
-                 true -> Paths;
-                 _ -> [NewPath]
-             end
+    CurPathLen = length(OldPath),
+    case NewPathLen < CurPathLen of
+        true -> NewPath;
+        _ -> OldPath
     end.
 
 find_path_internal({X1, Y1}, {X2, Y2}, XYAllowedSet) ->
     [_, Result] = find_path_internal({X1, Y1}, {X2, Y2}, XYAllowedSet, [[], []]),
-    lists:sort(Result).
+    Result.
 
-find_path_internal({X, Y}, {X, Y}, _XYAllowedSet, [CurrPath, RestPaths]) ->
+find_path_internal({X, Y}, {X, Y}, _XYAllowedSet, [CurrPath, SoFarShortestPath]) ->
     ?debugFmt("Reached EndPoint!------------------------------------------------~n", []),
-    [CurrPath, add_path(lists:reverse([{X,Y}|CurrPath]),RestPaths)];
-find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, RestPaths]) ->
-    ?debugFmt("find_path_internal head: X: ~p, Y: ~p    EndX: ~p, EndY: ~p~nCurrPath: ~p~nRestPaths: ~p~n", [X, Y, EndX, EndY, CurrPath, RestPaths]),
+    [CurrPath, store_shorter_path(lists:reverse([{X,Y}|CurrPath]),SoFarShortestPath)];
+find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, SoFarShortestPath]) ->
+    ?debugFmt("find_path_internal head: X: ~p, Y: ~p    EndX: ~p, EndY: ~p~nCurrPath: ~p~nSoFarShortestPath: ~p~n", [X, Y, EndX, EndY, CurrPath, SoFarShortestPath]),
 
     AlreadyInPath = lists:member({X,Y}, CurrPath),
     case AlreadyInPath of
         true ->
             ?debugFmt("Path canceled1~n", []),
             %% Cancel this branch since {X,Y} is already in CurrPath
-            [[CurrPath], RestPaths];
+            [[CurrPath], SoFarShortestPath];
         _ ->
             CurrPathLen = length(CurrPath),
-            StoredPathLen = case RestPaths of
+            StoredPathLen = case SoFarShortestPath of
                                 [] -> CurrPathLen + 2; %% TODO: magic 2
-                                _ -> length(hd(RestPaths))
+                                _ -> length(SoFarShortestPath)
                             end,
             case CurrPathLen + 1 > StoredPathLen of  %% TODO: magic 1
                 true ->
                     ?debugFmt("Path canceled1~n", []),
                     %% Cancel this branch since its lenght is longer that lenth of the stored paths
-                    [[CurrPath], RestPaths];
+                    [[CurrPath], SoFarShortestPath];
                 _ ->
                     PotentialAdjPoints = get_adjacent_for_point({X,Y}),
                     ?debugFmt("PotentialAdjPoints: ~p~n", [PotentialAdjPoints]),
@@ -330,19 +327,19 @@ find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, RestPaths]) ->
                     case length(AdjPointsToCheck) > 0 of
                         true ->
                             ?debugFmt("AdjPointsToCheck: ~p~n", [AdjPointsToCheck]),
-                            lists:foldl(fun({XNew,YNew}, [_Ignored, NewRestPaths]) ->
-                                                find_path_internal({XNew,YNew}, {EndX,EndY}, XYAllowedSet, [[{X,Y}|CurrPath], NewRestPaths])
+                            lists:foldl(fun({XNew,YNew}, [_Ignored, NewSoFarShortestPath]) ->
+                                                find_path_internal({XNew,YNew}, {EndX,EndY}, XYAllowedSet, [[{X,Y}|CurrPath], NewSoFarShortestPath])
                                         end,
-                                        [CurrPath, RestPaths],
+                                        [CurrPath, SoFarShortestPath],
                                         AdjPointsToCheck);
                         _ ->
                             ?debugFmt("DeadEnd path: ~p~n", [[{X,Y}|CurrPath]]),
-                            [CurrPath, RestPaths]
+                            [CurrPath, SoFarShortestPath]
                     end
             end
     end.
 
-find_shortest_paths(BegPoint, EndPoint, M) ->
+find_shortest_path(BegPoint, EndPoint, M) ->
     BegPointLevel = dict:fetch(BegPoint, M#matrix.coords),
     MatrixPoints = matrix2points_list(M),
     MatrixPointsSet = sets:from_list(MatrixPoints),
@@ -359,24 +356,22 @@ find_shortest_paths(BegPoint, EndPoint, M) ->
 
     find_path_internal(BegPoint, EndPoint, sets:add_element(EndPoint, IsolatedPointsSet)).
 
-    %% TODO: use real implementation
-    %%lists:sort([{75,21}, {74,21}, {73,21}]).
-
 find_paths_test_() ->
     BegPoint = {80,20},
     EndPoint = {75,21},
-    ExpectedPaths = lists:sort([[{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {75,20}, {75,21}],
-                                [{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {76,21}, {75,21}],
-                                [{80,20}, {79,20}, {78,20}, {77,20}, {77,21}, {76,21}, {75,21}],
-                                [{80,20}, {79,20}, {78,20}, {78,21}, {77,21}, {76,21}, {75,21}],
-                                [{80,20}, {79,20}, {79,21}, {78,21}, {77,21}, {76,21}, {75,21}]
-                               ]),
+    PossibleShortestPaths = sets:from_list([[{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {75,20}, {75,21}],
+                                            [{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {76,21}, {75,21}],
+                                            [{80,20}, {79,20}, {78,20}, {77,20}, {77,21}, {76,21}, {75,21}],
+                                            [{80,20}, {79,20}, {78,20}, {78,21}, {77,21}, {76,21}, {75,21}],
+                                            [{80,20}, {79,20}, {79,21}, {78,21}, {77,21}, {76,21}, {75,21}]
+                                           ]),
 
     {timeout, 20, ?_test(begin
                              %%{_, _, M} = load_input("input_day12_modified.txt"),
                              {_, _, M} = load_input("input_day12.txt"),
                              NewM = remove_traps(M),
-                             ?assertEqual(ExpectedPaths, lists:sort(find_shortest_paths(BegPoint, EndPoint, NewM)))
+                             ShortestPath = find_shortest_path(BegPoint, EndPoint, NewM),
+                             ?assertEqual(true, sets:is_element(ShortestPath, PossibleShortestPaths))
                          end)}.
 
 -endif.
