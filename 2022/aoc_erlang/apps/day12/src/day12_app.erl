@@ -273,21 +273,110 @@ remove_traps_test_() ->
                              true
                          end)}.
 
-find_paths(BegPoints, EndPoints, Matrix) ->
-    not_implemented.
+matrix2points_list(#matrix{coords = Coords}) ->
+    %%dict:to_list(dict:map(fun({X,Y}, _Value) -> {X,Y} end, Coords)).
+    lists:map(fun({Point, Level}) -> Point end, dict:to_list(Coords)).
+
+add_path(NewPath, []) ->
+    [NewPath];
+add_path(NewPath, Paths) ->
+    NewPathLen = length(NewPath),
+    CurPathLen = length(hd(Paths)),
+    case NewPathLen =:= CurPathLen of
+        true -> [NewPath|Paths];
+        _ -> case NewPathLen > CurPathLen of
+                 true -> Paths;
+                 _ -> [NewPath]
+             end
+    end.
+
+find_path_internal({X1, Y1}, {X2, Y2}, XYAllowedSet) ->
+    [_, Result] = find_path_internal({X1, Y1}, {X2, Y2}, XYAllowedSet, [[], []]),
+    lists:sort(Result).
+
+find_path_internal({X, Y}, {X, Y}, _XYAllowedSet, [CurrPath, RestPaths]) ->
+    ?debugFmt("Reached EndPoint!------------------------------------------------~n", []),
+    [CurrPath, add_path(lists:reverse([{X,Y}|CurrPath]),RestPaths)];
+find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, RestPaths]) ->
+    ?debugFmt("find_path_internal head: X: ~p, Y: ~p    EndX: ~p, EndY: ~p~nCurrPath: ~p~nRestPaths: ~p~n", [X, Y, EndX, EndY, CurrPath, RestPaths]),
+
+    AlreadyInPath = lists:member({X,Y}, CurrPath),
+    case AlreadyInPath of
+        true ->
+            ?debugFmt("Path canceled1~n", []),
+            %% Cancel this branch since {X,Y} is already in CurrPath
+            [[CurrPath], RestPaths];
+        _ ->
+            CurrPathLen = length(CurrPath),
+            StoredPathLen = case RestPaths of
+                                [] -> CurrPathLen + 2; %% TODO: magic 2
+                                _ -> length(hd(RestPaths))
+                            end,
+            case CurrPathLen + 1 > StoredPathLen of  %% TODO: magic 1
+                true ->
+                    ?debugFmt("Path canceled1~n", []),
+                    %% Cancel this branch since its lenght is longer that lenth of the stored paths
+                    [[CurrPath], RestPaths];
+                _ ->
+                    PotentialAdjPoints = get_adjacent_for_point({X,Y}),
+                    ?debugFmt("PotentialAdjPoints: ~p~n", [PotentialAdjPoints]),
+                    PotentialAdjPointsSet = sets:from_list(PotentialAdjPoints),
+
+                    AdjPointsWithinAllowedSet = sets:intersection(PotentialAdjPointsSet, XYAllowedSet),
+                    AdjPointsNotExistingInCurrPath = sets:subtract(AdjPointsWithinAllowedSet, sets:from_list(CurrPath)),
+
+                    AdjPointsToCheck = sets:to_list(AdjPointsNotExistingInCurrPath),
+
+                    case length(AdjPointsToCheck) > 0 of
+                        true ->
+                            ?debugFmt("AdjPointsToCheck: ~p~n", [AdjPointsToCheck]),
+                            lists:foldl(fun({XNew,YNew}, [_Ignored, NewRestPaths]) ->
+                                                find_path_internal({XNew,YNew}, {EndX,EndY}, XYAllowedSet, [[{X,Y}|CurrPath], NewRestPaths])
+                                        end,
+                                        [CurrPath, RestPaths],
+                                        AdjPointsToCheck);
+                        _ ->
+                            ?debugFmt("DeadEnd path: ~p~n", [[{X,Y}|CurrPath]]),
+                            [CurrPath, RestPaths]
+                    end
+            end
+    end.
+
+find_shortest_paths(BegPoint, EndPoint, M) ->
+    BegPointLevel = dict:fetch(BegPoint, M#matrix.coords),
+    MatrixPoints = matrix2points_list(M),
+    MatrixPointsSet = sets:from_list(MatrixPoints),
+
+    %% Filter chart points so only isolated area for BegPoint is left
+    Isolated = get_isolated({BegPoint, BegPointLevel}, M),
+    IsolatedPoints = matrix2points_list(Isolated),
+    IsolatedPointsSet = sets:from_list(IsolatedPoints),
+
+    %% Make sure EndPoint is adjacent to Isolated
+    EndPointAdjacentSet = sets:from_list(get_adjacent_for_point(EndPoint)),
+    Intersection = sets:intersection(EndPointAdjacentSet, IsolatedPointsSet),
+    true = (sets:size(Intersection) > 0), %% Assertion that forces EndPoint to be at the edge os IsolatedPoints
+
+    find_path_internal(BegPoint, EndPoint, sets:add_element(EndPoint, IsolatedPointsSet)).
+
+    %% TODO: use real implementation
+    %%lists:sort([{75,21}, {74,21}, {73,21}]).
 
 find_paths_test_() ->
-    BegPoints = [{74,21}, {75,21}],
-    EndPoints = [{73,21}],
-    ExpectedPaths = lists:sort([
-                                [{74,21}, {73,21}],
-                                [{75,21}, {74,21}, {73,21}]
-                    ]),
+    BegPoint = {80,20},
+    EndPoint = {75,21},
+    ExpectedPaths = lists:sort([[{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {75,20}, {75,21}],
+                                [{80,20}, {79,20}, {78,20}, {77,20}, {76,20}, {76,21}, {75,21}],
+                                [{80,20}, {79,20}, {78,20}, {77,20}, {77,21}, {76,21}, {75,21}],
+                                [{80,20}, {79,20}, {78,20}, {78,21}, {77,21}, {76,21}, {75,21}],
+                                [{80,20}, {79,20}, {79,21}, {78,21}, {77,21}, {76,21}, {75,21}]
+                               ]),
+
     {timeout, 20, ?_test(begin
+                             %%{_, _, M} = load_input("input_day12_modified.txt"),
                              {_, _, M} = load_input("input_day12.txt"),
                              NewM = remove_traps(M),
-                             print_matrix(NewM, "", ?LINE),
-                             ?assertEqual(ExpectedPaths, find_paths(BegPoints, EndPoints, NewM))
+                             ?assertEqual(ExpectedPaths, lists:sort(find_shortest_paths(BegPoint, EndPoint, NewM)))
                          end)}.
 
 -endif.
