@@ -136,7 +136,8 @@ print_matrix(M, DbgMessage, DbgLine) ->
 %    {_, _, M} = load_input("test_input_day12.txt"),
 %    print_matrix(M, "", ?LINE).
 
-get_isolated(Point, M) ->
+get_isolated({X,Y}, M) ->
+    Point = {{X,Y}, dict:fetch({X,Y}, M#matrix.coords)},
     M#matrix{coords=get_isolated(Point, M, dict:from_list([Point]))}.
 
 get_isolated({{X, Y}, Val}, M, Acc) ->
@@ -175,8 +176,8 @@ points_subtract(P1, P2) ->
 
 get_adjacent_for_point({X, Y}) -> [{X+1, Y}, {X-1, Y}, {X, Y+1}, {X, Y-1}].
 
-get_boundary(Point, M) ->
-    Isolated = get_isolated(Point, M),
+boundary_external({X,Y}, M) ->
+    Isolated = get_isolated({X,Y}, M),
     PotentialAdjacentCords = dict:fold(fun(PointInIsolated, _Height, Acc) ->
                                                lists:foldl(fun(AdjPoint, AccForList) ->
                                                                    sets:add_element(AdjPoint, AccForList)
@@ -190,7 +191,7 @@ get_boundary(Point, M) ->
     IsolatedXY = sets:from_list([{X, Y} || {{X, Y}, _} <- dict:to_list(Isolated#matrix.coords)]),
     PotentialMinusIsolated = sets:to_list(sets:subtract(PotentialAdjacentCords, IsolatedXY)),
     %%?debugFmt("PotentialMinusIsolated: ~p", [PotentialMinusIsolated]),
-    BoundryCoords = lists:foldl(fun({X, Y}, Acc) ->
+    BoundaryCoords = lists:foldl(fun({X, Y}, Acc) ->
                                         Found = dict:find({X, Y}, M#matrix.coords),
                                         case Found of
                                             {ok, Value} -> dict:store({X,Y}, Value, Acc);
@@ -199,25 +200,26 @@ get_boundary(Point, M) ->
                                 end,
                                 dict:new(),
                                 PotentialMinusIsolated),
-    M#matrix{coords=BoundryCoords}.
+    M#matrix{coords=BoundaryCoords}.
+
 
 get_isolated_c_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
-    IsolatedMatrix = get_isolated({{2,3}, 2}, M),
+    IsolatedMatrix = get_isolated({2,3}, M),
     %%print_matrix(IsolatedMatrix, "", ?LINE),
     ExpectedIsolatedArea = dict:from_list([{{3,2},2},{{2,3},2},{{3,3},2},{{2,4},2},{{3,4},2}]),
     ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
 
 get_isolated_x_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
-    IsolatedMatrix = get_isolated({{7,3},23}, M),
+    IsolatedMatrix = get_isolated({7,3}, M),
     %%print_matrix(IsolatedMatrix, "",  ?LINE),
     ExpectedIsolatedArea = dict:from_list([{{7,3},23},{{6,2},23},{{7,2},23}]),
     ?assertEqual(ExpectedIsolatedArea, IsolatedMatrix#matrix.coords).
 
-get_boundary_test() ->
+boundary_external_test() ->
     {_, _, M} = load_input("test_input_day12.txt"),
-    BoundaryMatrix = get_boundary({{2,3}, 2}, M),
+    BoundaryMatrix = boundary_external({2,3}, M),
     %%print_matrix(BoundaryMatrix, "",  ?LINE),
     ExpectedBoundaryArea = dict:from_list([{{3,1},1},
                                            {{2,2},1},{{4,2},17},
@@ -228,10 +230,10 @@ get_boundary_test() ->
 
 find_trap_area(_M, []) -> none;
 find_trap_area(M, PotentialTrapPoints) ->
-    {{_, _}, Level} = Point = hd(PotentialTrapPoints),
-    PotentialTrapArea = get_isolated(Point, M),
-    Boundary = get_boundary(Point, M),
-    %% This is trap if eveything in Boundry is more than one level higher than Level of Point
+    {{X, Y}, Level} = Point = hd(PotentialTrapPoints),
+    PotentialTrapArea = get_isolated({X,Y}, M),
+    Boundary = boundary_external({X,Y}, M),
+    %% This is trap if eveything in Boundary is more than one level higher than Level of Point
     AreThereExits = lists:dropwhile(fun(BoundaryPoint) ->
                                                  {{_,_}, BoundaryPointLevel} = BoundaryPoint,
                                                  Result = (BoundaryPointLevel > Level + 1),
@@ -292,10 +294,10 @@ find_path_internal({X1, Y1}, {X2, Y2}, XYAllowedSet) ->
     Result.
 
 find_path_internal({X, Y}, {X, Y}, _XYAllowedSet, [CurrPath, SoFarShortestPath]) ->
-    ?debugFmt("Reached EndPoint!------------------------------------------------~n", []),
+    %%?debugFmt("Reached EndPoint!------------------------------------------------~n", []),
     [CurrPath, store_shorter_path(lists:reverse([{X,Y}|CurrPath]),SoFarShortestPath)];
 find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, SoFarShortestPath]) ->
-    ?debugFmt("find_path_internal head: X: ~p, Y: ~p    EndX: ~p, EndY: ~p~nCurrPath: ~p~nSoFarShortestPath: ~p~n", [X, Y, EndX, EndY, CurrPath, SoFarShortestPath]),
+    %%?debugFmt("find_path_internal head: X: ~p, Y: ~p    EndX: ~p, EndY: ~p~nCurrPath: ~p~nSoFarShortestPath: ~p~n", [X, Y, EndX, EndY, CurrPath, SoFarShortestPath]),
 
     AlreadyInPath = lists:member({X,Y}, CurrPath),
     case AlreadyInPath of
@@ -311,12 +313,12 @@ find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, SoFarShortestP
                             end,
             case CurrPathLen + 1 > StoredPathLen of  %% TODO: magic 1
                 true ->
-                    ?debugFmt("Path canceled1~n", []),
+                    %%?debugFmt("Path canceled1~n", []),
                     %% Cancel this branch since its lenght is longer that lenth of the stored paths
                     [[CurrPath], SoFarShortestPath];
                 _ ->
                     PotentialAdjPoints = get_adjacent_for_point({X,Y}),
-                    ?debugFmt("PotentialAdjPoints: ~p~n", [PotentialAdjPoints]),
+                    %%?debugFmt("PotentialAdjPoints: ~p~n", [PotentialAdjPoints]),
                     PotentialAdjPointsSet = sets:from_list(PotentialAdjPoints),
 
                     AdjPointsWithinAllowedSet = sets:intersection(PotentialAdjPointsSet, XYAllowedSet),
@@ -326,14 +328,14 @@ find_path_internal({X, Y}, {EndX, EndY}, XYAllowedSet, [CurrPath, SoFarShortestP
 
                     case length(AdjPointsToCheck) > 0 of
                         true ->
-                            ?debugFmt("AdjPointsToCheck: ~p~n", [AdjPointsToCheck]),
+                            %%?debugFmt("AdjPointsToCheck: ~p~n", [AdjPointsToCheck]),
                             lists:foldl(fun({XNew,YNew}, [_Ignored, NewSoFarShortestPath]) ->
                                                 find_path_internal({XNew,YNew}, {EndX,EndY}, XYAllowedSet, [[{X,Y}|CurrPath], NewSoFarShortestPath])
                                         end,
                                         [CurrPath, SoFarShortestPath],
                                         AdjPointsToCheck);
                         _ ->
-                            ?debugFmt("DeadEnd path: ~p~n", [[{X,Y}|CurrPath]]),
+                            %%?debugFmt("DeadEnd path: ~p~n", [[{X,Y}|CurrPath]]),
                             [CurrPath, SoFarShortestPath]
                     end
             end
@@ -345,7 +347,7 @@ find_shortest_path(BegPoint, EndPoint, M) ->
     MatrixPointsSet = sets:from_list(MatrixPoints),
 
     %% Filter chart points so only isolated area for BegPoint is left
-    Isolated = get_isolated({BegPoint, BegPointLevel}, M),
+    Isolated = get_isolated(BegPoint, M),
     IsolatedPoints = matrix2points_list(Isolated),
     IsolatedPointsSet = sets:from_list(IsolatedPoints),
 
@@ -373,5 +375,29 @@ find_paths_test_() ->
                              ShortestPath = find_shortest_path(BegPoint, EndPoint, NewM),
                              ?assertEqual(true, sets:is_element(ShortestPath, PossibleShortestPaths))
                          end)}.
+
+find_shortest_path_for_series(BegPoints, EndPoints, M) ->
+    ok.
+
+find_shortest_path_for_series1_test_() ->
+
+    {timeout, 20,
+     ?_test(
+        begin
+            BegPoints1 = [{74,21}, {75,21}],
+            EndPoints1 = [{73,21}],
+            {_, _, M} = load_input("input_day12.txt"),
+            NewM = remove_traps(M),
+
+            Paths1 = lists:map(fun({BegPoint, EndPoint}) ->
+                                       find_shortest_path(BegPoint, EndPoint, NewM)
+                               end,
+                               [{B, E} || B <- BegPoints1, E <- EndPoints1]),
+            ?debugFmt("Paths1:~n~p~n", [Paths1])
+
+            %%BegPoints2 = boundary_external({2,3}, M),
+        end)
+    }.
+
 
 -endif.
