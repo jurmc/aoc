@@ -133,5 +133,22 @@ get_next_point_test() ->
     {NextX, NextY} = get_next_point(Unvisited),
     ?assertEqual({7,3}, {NextX, NextY}).
 
+find_fewest_steps(M) ->
+    Unvisited = dict:store({1,1}, 0, init_unvisited(M)),
+    Visited = dict:new(),
+    FinalVisited = find_fewest_steps(Visited, Unvisited, M),
+    dict:fetch({6,3}, FinalVisited).
+
+find_fewest_steps(Visited, Unvisited, M) ->
+    case dict:size(Unvisited) of
+        0 -> Visited;
+        _ ->
+            {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
+            find_fewest_steps(NewVisited, NewUnvisited, M)
+    end.
+
+find_fewest_steps_test() ->
+    M = load_input("test_input_day12.txt"),
+    ?assertEqual(31, find_fewest_steps(M)).
 
 -endif.
