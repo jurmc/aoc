@@ -83,11 +83,11 @@ init_unvisited_test() ->
              end,
              InitDist).
 
-process_point({X, Y}, Visited, Unvisited, M) ->
+process_point(Visited, Unvisited, M) ->
+    {X, Y} = get_next_point(Unvisited),
     Neighbours = neighbours_for_point({X,Y}, M),
     Dist = dict:fetch({X,Y}, Unvisited),
     NewUnvisited = lists:foldl(fun({Nx, Ny}, Acc) ->
-                                       ?debugFmt("Nx: ~p, Ny: ~p, Dist: ~p~n", [Nx, Ny, Dist]),
                                        NewDist = Dist+1,
                                        Val = dict:fetch({Nx,Ny}, Acc),
                                        case Val of
@@ -100,36 +100,20 @@ process_point({X, Y}, Visited, Unvisited, M) ->
     NewVisited = dict:store({X,Y}, Dist, Visited),
     {NewVisited, dict:erase({X,Y}, NewUnvisited)}.
 
-process_point1_test() ->
+process_point_test() ->
     M = load_input("test_input_day12.txt"),
-    Unvisited = dict:store({1,1}, 0, init_unvisited(M)),
+    Unvisited = dict:store({2,5}, 5, init_unvisited(M)),
     Visited = dict:new(),
-    ExepectedNewVisited = dict:from_list([{{1,1},0}]),
+    ExepectedNewVisited = dict:from_list([{{2,5},5}]),
 
-    ExpUnvisitedPrep1 = dict:erase({1,1}, Unvisited),
-    ExpUnvisitedPrep2 = dict:store({2,1}, 1, ExpUnvisitedPrep1),
-    ExpUnvisitedPrep3 = dict:store({1,2}, 1, ExpUnvisitedPrep2),
+    ExpUnvisitedPrep1 = dict:erase({2,5}, Unvisited),
+    ExpUnvisitedPrep2 = dict:store({1,5}, 6, ExpUnvisitedPrep1),
+    ExpUnvisitedPrep3 = dict:store({2,4}, 6, ExpUnvisitedPrep2),
     ExepectedNewUnvisited = ExpUnvisitedPrep3,
 
-    {NewVisited, NewUnvisited} = process_point({1,1}, Visited, Unvisited, M),
+    {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
     ?assertEqual(ExepectedNewVisited, NewVisited),
     ?assertEqual(ExepectedNewUnvisited, NewUnvisited).
-
-%%process_point2_test() ->
-%%    M = load_input("test_input_day12.txt"),
-%%    Unvisited = dict:store({2,5}, 5, init_unvisited(M)),
-%%    ?debugFmt("Unvisited: ~p~n", [dict:to_list(Unvisited)]),
-%%    Visited = dict:new(),
-%%    ExepectedNewVisited = dict:from_list([{{2,5},5}]),
-%%
-%%    ExpUnvisitedPrep1 = dict:erase({2,5}, Unvisited),
-%%    ExpUnvisitedPrep2 = dict:store({1,5}, 6, ExpUnvisitedPrep1),
-%%    ExpUnvisitedPrep3 = dict:store({2,4}, 6, ExpUnvisitedPrep2),
-%%    ExepectedNewUnvisited = ExpUnvisitedPrep3,
-%%
-%%    {NewVisited, NewUnvisited} = process_point({2,5}, Visited, Unvisited, M),
-%%    ?assertEqual(ExepectedNewVisited, NewVisited),
-%%    ?assertEqual(ExepectedNewUnvisited, NewUnvisited).
 
 get_next_point(Unvisited) ->
     {Point, _Dist} = dict:fold(fun({X,Y}, Dist, {{StoredX,StoredY}, StoredDist}) ->
