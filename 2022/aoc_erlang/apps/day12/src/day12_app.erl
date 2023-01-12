@@ -5,10 +5,6 @@
 
 %%% Exported functions
 
-part2(_FileName) ->
-    ok.
-
-
 %%% Internal functions
 
 load_input(FileName) ->
@@ -157,7 +153,7 @@ find_fewest_steps(M) ->
     Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
     Visited = dict:new(),
     FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}),
-    dict:fetch({EndX,EndY}, FinalVisited).
+    dict:find({EndX,EndY}, FinalVisited).
 
 only_inf_in_unvisited(Unvisited) ->
     lists:all(fun({{_,_}, Val}) ->
@@ -184,21 +180,77 @@ find_fewest_steps(Visited, Unvisited, M, Endpoint) ->
 
 find_fewest_steps_test() ->
     M = load_input("test_input_day12.txt"),
-    ?assertEqual(31, find_fewest_steps(M)).
+    ?assertEqual({ok, 31}, find_fewest_steps(M)).
 
 part1(FileName) ->
     M = load_input(FileName),
     find_fewest_steps(M).
 
-part1_test_() ->
-    {timeout, 60, ?_test(begin
-                             TestResult = part1("test_input_day12.txt"),
-                             ?debugFmt("Part1 result: ~p", [TestResult]),
-                             ?assertEqual(31, TestResult),
+part1_test() ->
+    TestResult = part1("test_input_day12.txt"),
+    ?debugFmt("Part1 result: ~p", [TestResult]),
+    ?assertEqual({ok,31}, TestResult),
 
-                             Result = part1("input_day12.txt"),
-                             ?debugFmt("Part1 result: ~p", [Result]),
-                             ?assertEqual(420, Result)
+    Result = part1("input_day12.txt"),
+    ?debugFmt("Part1 result: ~p", [Result]),
+    ?assertEqual({ok,420}, Result).
+
+get_all_for_height(Height, M) ->
+    dict:filter(fun({X,Y}, _) ->
+                        ThisPointHeight = height({X,Y}, M),
+                        ThisPointHeight =:= Height
+                end,
+                M).
+
+get_all_for_level_test() ->
+    M = load_input("test_input_day12.txt"),
+    AllLowest = get_all_for_height($a, M),
+    ?assertEqual(6, dict:size(AllLowest)).
+
+replace_start({X,Y}, M) ->
+    {OldStartX, OldStartY} = find($S, M),
+    M2 = dict:store({OldStartX, OldStartY}, $a, M),
+    %%?debugFmt("{OldStartX, OldStartY}: {~p,~p}", [OldStartX,OldStartY]),
+    %%?debugFmt("{NewStartX, NewStartY}: {~p,~p}", [X,Y]),
+    Result = dict:store({X,Y}, $S, M2),
+    %%?debugFmt("Result: ~p", [dict:to_list(Result)]),
+    Result.
+
+part2(FileName) ->
+    M = load_input(FileName),
+    AllLowest = get_all_for_height($a, M),
+    Size = dict:size(AllLowest),
+    {Result, _Cnt} = dict:fold(fun({X,Y},_,{Acc, Cnt}) ->
+                                       %%?debugFmt("{X,Y}: {~p,~p}", [X,Y]),
+                                       ?debugFmt("Curr Acc: ~p (progress: ~p/~p)", [Acc, Cnt, Size]),
+                                       ModM = replace_start({X,Y}, M),
+                                       Out = find_fewest_steps(ModM),
+                                       case Out of
+                                           {ok, StepsNo} ->
+                                               case StepsNo < Acc of
+                                                   true ->
+                                                       {StepsNo, Cnt+1};
+                                                   _ -> {Acc, Cnt+1}
+                                               end;
+                                           error -> {Acc, Cnt+1}
+                                       end
+                               end,
+                               {find_fewest_steps(M), 0},
+                               AllLowest),
+    Result.
+
+part2_test_() ->
+    %% TODO: this is very not optimal
+    %%       we can have this result if we properly process whole matrix for part1 and insted only result for S
+    %%       we will have results for all matrix fileds, then we can filter matrix only for a and then get minimal distance
+    {timeout, 5*60, ?_test(begin
+                             TestResult = part2("test_input_day12.txt"),
+                             ?debugFmt("TestResult: ~p", [TestResult]),
+                             ?assertEqual(29, TestResult),
+
+                             Result = part2("input_day12.txt"),
+                             ?debugFmt("Result: ~p", [Result]),
+                             ?assertEqual(414, Result)
                          end)}.
 
 -endif.
