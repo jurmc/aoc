@@ -8,8 +8,6 @@
 part2(_FileName) ->
     ok.
 
-part1(_FileName) ->
-    ok.
 
 %%% Internal functions
 
@@ -43,30 +41,39 @@ height({X,Y}, M) ->
         _ -> dict:fetch({X,Y}, M)
     end.
 
-neighbours_for_point({X,Y}, M) ->
+neighbours_for_point({X,Y}, Unvisited, M) ->
     PotentialNeighbours = [{X+1,Y}, {X-1,Y}, {X,Y+1}, {X,Y-1}],
     PotentialNeighbours1 = lists:filter(fun({NeighbourX,NeighbourY}) ->
                                                 dict:is_key({NeighbourX, NeighbourY}, M)
                                         end,
                                         PotentialNeighbours),
+    PotentialNeighbours2 = lists:filter(fun({NeighbourX,NeighbourY}) ->
+                                                dict:is_key({NeighbourX,NeighbourY}, Unvisited)
+                                        end,
+                                        PotentialNeighbours1),
     CurrHeight = height({X,Y}, M),
     lists:filter(fun({NeighbourX,NeighbourY}) ->
                          NeighbourHeight = height({NeighbourX,NeighbourY},M),
                          NeighbourHeight - CurrHeight =< 1
                  end,
-                 PotentialNeighbours1).
+                 PotentialNeighbours2).
 
 neighbours_for_point_test() ->
     M = load_input("test_input_day12.txt"),
+    Unvisited = init_unvisited(M),
 
     ExpectedNeighbours1 = sets:from_list([{2,1}, {1,2}]),
-    ?assertEqual(ExpectedNeighbours1, sets:from_list(neighbours_for_point({1,1}, M))),
+    ?assertEqual(ExpectedNeighbours1, sets:from_list(neighbours_for_point({1,1}, Unvisited, M))),
 
     ExpectedNeighbours2 = sets:from_list([{5,3}, {7,3}, {6,2}, {6,4}]),
-    ?assertEqual(ExpectedNeighbours2, sets:from_list(neighbours_for_point({6,3}, M))),
+    ?assertEqual(ExpectedNeighbours2, sets:from_list(neighbours_for_point({6,3}, Unvisited, M))),
 
     ExpectedNeighbours3 = sets:from_list([{1,5}, {2,4}]),
-    ?assertEqual(ExpectedNeighbours3, sets:from_list(neighbours_for_point({2,5}, M))).
+    ?assertEqual(ExpectedNeighbours3, sets:from_list(neighbours_for_point({2,5}, Unvisited, M))),
+
+    UnvisitedWithoutTopLevl = dict:erase({1,1}, Unvisited),
+    ExpectedNeighbours4 = sets:from_list([{1,3}, {2,2}]),
+    ?assertEqual(ExpectedNeighbours4, sets:from_list(neighbours_for_point({1,2}, UnvisitedWithoutTopLevl, M))).
 
 init_unvisited(M) ->
     TentativeDistVals = dict:fold(fun(Key, _Val, Acc) ->
@@ -84,15 +91,15 @@ init_unvisited_test() ->
              InitDist).
 
 process_point(Visited, Unvisited, M) ->
-    {X, Y} = get_next_point(Unvisited),
-    Neighbours = neighbours_for_point({X,Y}, M),
+    {X,Y} = get_next_point(Unvisited),
+    Neighbours = neighbours_for_point({X,Y}, Unvisited, M),
     Dist = dict:fetch({X,Y}, Unvisited),
+    PotentialNewDist = Dist + 1,
     NewUnvisited = lists:foldl(fun({Nx, Ny}, Acc) ->
-                                       NewDist = Dist+1,
-                                       Val = dict:fetch({Nx,Ny}, Acc),
-                                       case Val of
-                                           inf -> dict:store({Nx,Ny}, NewDist, Acc);
-                                           _ -> dict:update_counter({Nx,Ny}, NewDist, Acc)
+                                       StoredDist = dict:fetch({Nx,Ny}, Acc),
+                                       case PotentialNewDist < StoredDist of
+                                           true -> dict:store({Nx,Ny}, PotentialNewDist, Acc);
+                                           _ -> Acc
                                        end
                                end,
                                Unvisited,
@@ -116,13 +123,16 @@ process_point_test() ->
     ?assertEqual(ExepectedNewUnvisited, NewUnvisited).
 
 get_next_point(Unvisited) ->
-    {Point, _Dist} = dict:fold(fun({X,Y}, Dist, {{StoredX,StoredY}, StoredDist}) ->
+    {Point, _Dist} = dict:fold(fun({X,Y}, Dist, {}) ->
+                                       {{X,Y}, Dist};
+                                  ({X,Y}, Dist, {{StoredX,StoredY}, StoredDist}) ->
                                        case Dist < StoredDist of
                                            true -> {{X,Y}, Dist};
-                                           _ -> {{StoredX, StoredY}, StoredDist}
+                                           _ ->
+                                               {{StoredX, StoredY}, StoredDist}
                                        end
                                end,
-                               {{1,1}, inf},
+                               {},
                                Unvisited),
     Point.
 
@@ -133,22 +143,62 @@ get_next_point_test() ->
     {NextX, NextY} = get_next_point(Unvisited),
     ?assertEqual({7,3}, {NextX, NextY}).
 
-find_fewest_steps(M) ->
-    Unvisited = dict:store({1,1}, 0, init_unvisited(M)),
-    Visited = dict:new(),
-    FinalVisited = find_fewest_steps(Visited, Unvisited, M),
-    dict:fetch({6,3}, FinalVisited).
+find(Symbol, M) ->
+    Filtered = dict:filter(fun(Key, Val) ->
+                                  Val =:= Symbol 
+                           end,
+                           M),
+    [{{X,Y}, _Val}] = dict:to_list(Filtered),
+    {X,Y}.
 
-find_fewest_steps(Visited, Unvisited, M) ->
-    case dict:size(Unvisited) of
-        0 -> Visited;
-        _ ->
-            {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
-            find_fewest_steps(NewVisited, NewUnvisited, M)
+find_fewest_steps(M) ->
+    {StartX, StartY} = find($S, M),
+    {EndX, EndY} = find($E, M),
+    Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
+    Visited = dict:new(),
+    FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}),
+    dict:fetch({EndX,EndY}, FinalVisited).
+
+only_inf_in_unvisited(Unvisited) ->
+    lists:all(fun({{_,_}, Val}) ->
+                      Val =:= inf
+              end,
+              dict:to_list(Unvisited)).
+
+endpoint_in_visited(Endpoint, Visited) ->
+
+    dict:is_key(Endpoint, Visited).
+
+find_fewest_steps(Visited, Unvisited, M, Endpoint) ->
+    case only_inf_in_unvisited(Unvisited) or endpoint_in_visited(Endpoint, Visited) of
+        true ->
+            Visited;
+        _ -> case dict:size(Unvisited) of
+                 0 -> Visited;
+                 _ ->
+                     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
+                     %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
+                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
+             end
     end.
 
 find_fewest_steps_test() ->
     M = load_input("test_input_day12.txt"),
     ?assertEqual(31, find_fewest_steps(M)).
+
+part1(FileName) ->
+    M = load_input(FileName),
+    find_fewest_steps(M).
+
+part1_test_() ->
+    {timeout, 60, ?_test(begin
+                             TestResult = part1("test_input_day12.txt"),
+                             ?debugFmt("Part1 result: ~p", [TestResult]),
+                             ?assertEqual(31, TestResult),
+
+                             Result = part1("input_day12.txt"),
+                             ?debugFmt("Part1 result: ~p", [Result]),
+                             ?assertEqual(420, Result)
+                         end)}.
 
 -endif.
