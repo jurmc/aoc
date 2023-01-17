@@ -17,13 +17,14 @@ part2(_FileName) ->
 -include_lib("eunit/include/eunit.hrl").
 
 read_input(FileName) ->
-    InLines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]).
+    InLines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
+    Pairs = lists:map(fun(Idx) ->
+                              {lists:nth(Idx, InLines), lists:nth(Idx+1, InLines)}
+                      end,
+                      lists:seq(1, length(InLines), 2)),
+    ?debugFmt("Pairs: ~p", [Pairs]).
 
-%% [ doDown
-%% ] backUp
-%%
-%% d goForward
-%% , closeAndGoForward
+
 
 to_integer(Str) ->
     %%?debugFmt("Str: ~p", [Str]),
@@ -33,16 +34,16 @@ to_integer(Str) ->
 read_list(Line) ->
     {_RestLine, Items} = read_list(Line, {[], []}),
     ?debugFmt("Result Items: ~p", [Items]),
-    Items.
+    lists:nth(1,Items).
 
 %% {RestLine, Items} = read_list(Line, {Items = [], OngointItem = []}).
 read_list([], {Items, []}) ->               % ]     - goStackUp
     ?debugFmt("Final: Items: ~p", [Items]),
     {[], Items};
-read_list([$]|T], {Items, []}) ->               % ]     - goStackUp
+read_list([$]|T], {Items, []}) ->
     ?debugFmt("Mark1.1(])", []),
     {T, lists:reverse(Items)};
-read_list([$]|T], {Items, OngoingDigits}) ->      % ]     - goStackUp
+read_list([$]|T], {Items, OngoingDigits}) ->
     ?debugFmt("Mark1.2(]): Items: ~p, OngoingDigits: ~p", [Items, OngoingDigits]),
     Int = to_integer(lists:reverse(OngoingDigits)),
     {T, lists:reverse([Int|Items])};
@@ -63,11 +64,23 @@ read_list([H|T], {Items, OngoingDigits}) ->       % digit - buildUpItem
     read_list(T, {Items, [H|OngoingDigits]}).
 
 read_list_test() ->
-    Line = "[1,1,3,1,1]",
-    ?assertEqual([1,1,3,1,1], read_list(Line)).
+    Line1 = "[1,1,3,1,1]",
+    ?assertEqual([1,1,3,1,1], read_list(Line1)),
 
-read_list_with_nested_list_test() ->
-    Line = "[[1,2],[3,4,5]]",
-    ?assertEqual([[1,2],[3,4,5]], read_list(Line)).
+    Line2 = "[[1,2],[3,4,5]]",
+    ?assertEqual([[1,2],[3,4,5]], read_list(Line2)),
+
+    Line3 = "[[4,4],4,4]",
+    ?assertEqual([[4,4],4,4], read_list(Line3)),
+
+    Line4 = "[[[]]]",
+    ?assertEqual([[[]]], read_list(Line4)),
+
+    Line5 = "[1,[2,[3,[4,[5,6,7]]]],8,9]",
+    ?assertEqual([1,[2,[3,[4,[5,6,7]]]],8,9], read_list(Line5)).
+
+read_input_test() ->
+    read_input("test_input_day13.txt").
+
 
 -endif.
