@@ -4,9 +4,6 @@
 
 %%% Exported functions
 
-part2(_FileName) ->
-    ok.
-
 %%% Internal functions
 
 %%% Unit tests
@@ -15,24 +12,31 @@ part2(_FileName) ->
 
 read_input(FileName) ->
     InLines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
+    lists:map(fun(Line) ->
+                      read_list(Line)
+              end,
+              InLines).
+
+%% TODO: Use read_input and only then group it into pairs
+read_input_into_pairs(FileName) ->
+    InLines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
     Pairs = lists:map(fun(Idx) ->
                               {read_list(lists:nth(Idx, InLines)),
                                read_list(lists:nth(Idx+1, InLines))}
                       end,
-                      lists:seq(1, length(InLines), 2)).
+                      lists:seq(1, length(InLines), 2)),
+    Pairs.
 
 to_integer(Str) ->
-    %%?debugFmt("Str: ~p", [Str]),
     {Int, []} = string:to_integer(Str),
     Int.
 
 read_list(Line) ->
     {_RestLine, Items} = read_list(Line, {[], []}),
-    %%?debugFmt("Result Items: ~p", [Items]),
     lists:nth(1,Items).
 
 %% {RestLine, Items} = read_list(Line, {Items = [], OngointItem = []}).
-read_list([], {Items, []}) ->               % ]     - goStackUp
+read_list([], {Items, []}) ->
     %%?debugFmt("Final: Items: ~p", [Items]),
     {[], Items};
 read_list([$]|T], {Items, []}) ->
@@ -42,19 +46,19 @@ read_list([$]|T], {Items, OngoingDigits}) ->
     %%?debugFmt("Mark1.2(]): Items: ~p, OngoingDigits: ~p", [Items, OngoingDigits]),
     Int = to_integer(lists:reverse(OngoingDigits)),
     {T, lists:reverse([Int|Items])};
-read_list([$[|T], {Items, OngoingDigits = ""}) -> % [     - goStackDown
+read_list([$[|T], {Items, _OngoingDigits = ""}) ->
     %%?debugFmt("Mark2.1([): Items: ~p", [Items]),
     {NewT, NewItems} = read_list(T, {[], ""}),
     %%?debugFmt("Mark2.2([):   NewT: ~p, NewItems: ~p", [NewT, NewItems]),
     read_list(NewT, {[NewItems|Items], ""});
-read_list([$,|T], {Items, ""}) ->      % ,     - closeItem
+read_list([$,|T], {Items, ""}) ->
     %%?debugFmt("Mark3.1(,): Items: ~p", [Items]),
     read_list(T, {Items, ""});
-read_list([$,|T], {Items, OngoingDigits}) ->      % ,     - closeItem
+read_list([$,|T], {Items, OngoingDigits}) ->
     %%?debugFmt("Mark3.2(,): Items: ~p OngoingDigits: ~p", [Items, OngoingDigits]),
     Int = to_integer(lists:reverse(OngoingDigits)),
     read_list(T, {[Int|Items], []});
-read_list([H|T], {Items, OngoingDigits}) ->       % digit - buildUpItem
+read_list([H|T], {Items, OngoingDigits}) ->
     %%?debugFmt("Mark4(digit)", []),
     read_list(T, {Items, [H|OngoingDigits]}).
 
@@ -74,30 +78,30 @@ read_list_test() ->
     Line5 = "[1,[2,[3,[4,[5,6,7]]]],8,9]",
     ?assertEqual([1,[2,[3,[4,[5,6,7]]]],8,9], read_list(Line5)).
 
-compare_lists([], []) ->
+compare([], []) ->
     0;
-compare_lists([], [_]) ->
+compare([], _) ->
     -1;
-compare_lists([_], []) ->
+compare(_, []) ->
     1;
-compare_lists([H1|T1], [H2|T2]) when is_list(H1), is_integer(H2) ->
-    case compare_lists(H1, [H2]) of
-        0 -> compare_lists(T1,T2);
+compare([H1|T1], [H2|T2]) when is_list(H1), is_integer(H2) ->
+    case compare(H1, [H2]) of
+        0 -> compare(T1,T2);
         RetVal -> RetVal
     end;
-compare_lists([H1|T1], [H2|T2]) when is_list(H2), is_integer(H1) ->
-    case compare_lists([H1], H2) of
-        0 -> compare_lists(T1,T2);
+compare([H1|T1], [H2|T2]) when is_list(H2), is_integer(H1) ->
+    case compare([H1], H2) of
+        0 -> compare(T1,T2);
         RetVal -> RetVal
     end;
-compare_lists([H1|T1], [H2|T2]) when is_list(H1), is_list(H2) ->
-    case compare_lists(H1,H2) of
-        0 -> compare_lists(T1,T2);
+compare([H1|T1], [H2|T2]) when is_list(H1), is_list(H2) ->
+    case compare(H1,H2) of
+        0 -> compare(T1,T2);
         RetVal -> RetVal
     end;
-compare_lists([H1|T1], [H2|T2]) when is_integer(H1), is_integer(H2) ->
+compare([H1|T1], [H2|T2]) when is_integer(H1), is_integer(H2) ->
     case H1 =:= H2 of
-       true -> compare_lists(T1,T2);
+       true -> compare(T1,T2);
         _ -> case H1 < H2 of
                  true -> -1;
                  false -> 1
@@ -105,36 +109,53 @@ compare_lists([H1|T1], [H2|T2]) when is_integer(H1), is_integer(H2) ->
     end.
 
 compare_lists_test() ->
-    ?assertEqual(0, compare_lists([1,2,3], [1,2,3])),
-    ?assertEqual(-1, compare_lists([1,2,3], [1,2,4])),
-    ?assertEqual(1, compare_lists([1,2,3], [0,2,3])),
+    ?assertEqual(0, compare([1,2,3], [1,2,3])),
+    ?assertEqual(-1, compare([1,2,3], [1,2,4])),
+    ?assertEqual(1, compare([1,2,3], [0,2,3])),
 
-    ?assertEqual(-1, compare_lists([1,2], [1,2,3])),
-    ?assertEqual(1, compare_lists([1,2,3], [1,2])),
+    ?assertEqual(-1, compare([1,2], [1,2,3])),
+    ?assertEqual(1, compare([1,2,3], [1,2])),
 
-    ?assertEqual(0, compare_lists([1,[2],3], [1,2,3])),
-    ?assertEqual(-1, compare_lists([1,[1],3], [1,2,3])),
-    ?assertEqual(1, compare_lists([1,2,3], [1,2,[2]])),
+    ?assertEqual(0, compare([1,[2],3], [1,2,3])),
+    ?assertEqual(-1, compare([1,[1],3], [1,2,3])),
+    ?assertEqual(1, compare([1,2,3], [1,2,[2]])),
 
-    ?assertEqual(-1, compare_lists([[1],[2,3,4]], [[1],4])).
+    ?assertEqual(-1, compare([[1],[2,3,4]], [[1],4])),
+    ?assertEqual(-1, compare([], [7,[],10,6,[]])).
+
+less_than_or_equal(L1,L2) ->
+    case compare(L1,L2) of
+        1 -> false;
+        _ -> true
+    end.
 
 part1(FileName) ->
-    Input = read_input(FileName),
-    ?debugFmt("Input: ~p", [Input]),
+    Input = read_input_into_pairs(FileName),
     Indices = lists:filter(fun(Idx) ->
                                   {L1,L2} = lists:nth(Idx, Input),
-                                  compare_lists(L1,L2) =:= -1 
+                                  compare(L1,L2) =:= -1
                           end,
                           lists:seq(1,length(Input))),
-    ?debugFmt("Indices: ~p", [Indices]),
     SumIndices = lists:sum(Indices),
-    ?debugFmt("SumIndices: ~p", [SumIndices]),
     SumIndices.
-
 
 part1_test() ->
     ?assertEqual(13, part1("test_input_day13.txt")),
-    Result = part1("input_day13.txt"),
+    ?assertEqual(5684, part1("input_day13.txt")).
+
+part2(FileName) ->
+    DivPacket1 = [[2]],
+    DivPacket2 = [[6]],
+    Input = [DivPacket1,DivPacket2] ++ read_input(FileName),
+    SortedInput = lists:sort(fun less_than_or_equal/2, Input),
+    Idx1 = 1 + length(lists:takewhile(fun(Item) -> Item =/= DivPacket1 end, SortedInput)),
+    Idx2 = 1 + length(lists:takewhile(fun(Item) -> Item =/= DivPacket2 end, SortedInput)),
+    Idx1 * Idx2.
+
+
+part2_test() ->
+    ?assertEqual(140, part2("test_input_day13.txt")),
+    Result = part2("input_day13.txt"),
     ?debugFmt("Result: ~p", [Result]).
 
 -endif.
