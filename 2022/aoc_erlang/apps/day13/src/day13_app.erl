@@ -32,15 +32,13 @@ read_input(FileName) ->
               end,
               InLines).
 
-%% TODO: Use read_input and only then group it into pairs
 read_input_into_pairs(FileName) ->
-    InLines = aoc_input_app:read_file_lines(FileName, [remove_line_breaks]),
-    Pairs = lists:map(fun(Idx) ->
-                              {read_list(lists:nth(Idx, InLines)),
-                               read_list(lists:nth(Idx+1, InLines))}
-                      end,
-                      lists:seq(1, length(InLines), 2)),
-    Pairs.
+    InLists = read_input(FileName),
+    lists:map(fun(Idx) ->
+                      {lists:nth(Idx, InLists),
+                       lists:nth(Idx+1, InLists)}
+              end,
+              lists:seq(1, length(InLists), 2)).
 
 compare([], []) -> 0;
 compare([], _) -> -1;
