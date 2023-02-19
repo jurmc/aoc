@@ -148,22 +148,29 @@ get_next_point(Unvisited) ->
                                Unvisited),
     Point.
 
+is_there_pass_between_points ({X1,Y1}, {X2,Y2}, M) ->
+    H1 = height({X1,Y1}, M),
+    H2 = height({X2,Y2},M),
+    H2 - H1 =< 1.
+
+is_there_pass_between_points_for_reversed_paths ({X1,Y1}, {X2,Y2}, M) -> %%% TODO: not yest used in resolutions
+    is_there_pass_between_points({X2,Y2}, {X1,Y1}, M).
+
 neighbours_for_point({X,Y}, Unvisited, M) ->
-    PotentialNeighbours = [{X+1,Y}, {X-1,Y}, {X,Y+1}, {X,Y-1}],
-    PotentialNeighbours1 = lists:filter(fun({NeighbourX,NeighbourY}) ->
-                                                dict:is_key({NeighbourX, NeighbourY}, M)
+    CartesianNeighbours = [{X+1,Y}, {X-1,Y}, {X,Y+1}, {X,Y-1}],
+    WithinChartNeighbours = lists:filter(fun({NeighbourX,NeighbourY}) ->
+                                                 dict:is_key({NeighbourX, NeighbourY}, M)
+                                         end,
+                                         CartesianNeighbours),
+    UnvisitedNeighbours = lists:filter(fun({NeighbourX,NeighbourY}) ->
+                                               dict:is_key({NeighbourX,NeighbourY}, Unvisited)
+                                       end,
+                                       WithinChartNeighbours),
+    _ConnectedNeighbours = lists:filter(fun({NeighbourX,NeighbourY}) ->
+                                                is_there_pass_between_points({X,Y}, {NeighbourX,NeighbourY}, M)
                                         end,
-                                        PotentialNeighbours),
-    PotentialNeighbours2 = lists:filter(fun({NeighbourX,NeighbourY}) ->
-                                                dict:is_key({NeighbourX,NeighbourY}, Unvisited)
-                                        end,
-                                        PotentialNeighbours1),
-    CurrHeight = height({X,Y}, M),
-    lists:filter(fun({NeighbourX,NeighbourY}) ->
-                         NeighbourHeight = height({NeighbourX,NeighbourY},M),
-                         NeighbourHeight - CurrHeight =< 1
-                 end,
-                 PotentialNeighbours2).
+                                        UnvisitedNeighbours).
+
 
 %%% Unit tests
 %%-ifdef(TEST).
