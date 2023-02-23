@@ -10,10 +10,6 @@
 
 part1(FileName) ->
     M = load_input(FileName),
-    find_fewest_steps(M).
-
-part1_new(FileName) ->
-    M = load_input(FileName),
     Visited = evaluate_paths(M), % TODO: pass StartPoint to evaluate_paths, EndPoint is probably not needed at all since we'd like to evaluate all point with regard to shortest path
 
     ?debugFmt("Visited: ~p~n", [dict:to_list(Visited)]),
@@ -22,29 +18,6 @@ part1_new(FileName) ->
     dict:find({EndX,EndY}, Visited).
 
 part2(FileName) ->
-    M = load_input(FileName),
-    AllLowest = get_all_for_height($a, M),
-    Size = dict:size(AllLowest),
-    {Result, _Cnt} = dict:fold(fun({X,Y},_,{Acc, Cnt}) ->
-                                       %%io:format("Curr Acc: ~p (progress: ~p/~p)", [Acc, Cnt, Size]),
-                                       ?debugFmt("Curr Acc: ~p (progress: ~p/~p)", [Acc, Cnt, Size]),
-                                       ModM = replace_start({X,Y}, M),
-                                       Out = find_fewest_steps(ModM),
-                                       case Out of
-                                           {ok, StepsNo} ->
-                                               case StepsNo < Acc of
-                                                   true ->
-                                                       {StepsNo, Cnt+1};
-                                                   _ -> {Acc, Cnt+1}
-                                               end;
-                                           error -> {Acc, Cnt+1}
-                                       end
-                               end,
-                               {find_fewest_steps(M), 0},
-                               AllLowest),
-    Result.
-
-part2_new(FileName) ->
     M = load_input(FileName),
     AllLowest = get_all_for_height($a, M),
     Size = dict:size(AllLowest),
@@ -101,7 +74,7 @@ evaluate_paths(M) ->
     {EndX, EndY} = find($S, M),
     Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
     Visited = dict:new(),
-    FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}).
+    FinalVisited = evaluate_paths(Visited, Unvisited, M, {EndX, EndY}).
 
 evaluate_paths(Visited, Unvisited, M, Endpoint) ->
     case only_inf_in_unvisited(Unvisited) of
@@ -112,7 +85,7 @@ evaluate_paths(Visited, Unvisited, M, Endpoint) ->
                  _ ->
                      {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
                      %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
-                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
+                     evaluate_paths(NewVisited, NewUnvisited, M, Endpoint)
              end
     end.
 
@@ -294,35 +267,12 @@ part1_test() ->
     ?debugFmt("Part1 result: ~p", [Result]),
     ?assertEqual({ok,420}, Result).
 
-part1_new_test() ->
-    TestResult = part1_new("test_input_day12.txt"),
-    ?debugFmt("Part1 result: ~p", [TestResult]),
-    ?assertEqual({ok,31}, TestResult),
-
-    Result = part1_new("input_day12.txt"),
-    ?debugFmt("Part1 result: ~p", [Result]),
-    ?assertEqual({ok,420}, Result).
-
-part2_test_() ->
-    %% TODO: this is very not optimal
-    %%       we can have this result if we properly process whole matrix for part1 and insted only result for S
-    %%       we will have results for all matrix fileds, then we can filter matrix only for a and then get minimal distance
-    {timeout, 60*60, ?_test(begin
-                             TestResult = part2("test_input_day12.txt"),
-                             ?debugFmt("TestResult: ~p", [TestResult]),
-                             ?assertEqual(29, TestResult),
-
-                             Result = part2("input_day12.txt"),
-                             ?debugFmt("Result: ~p", [Result]),
-                             ?assertEqual(414, Result)
-                         end)}.
-
-part2_new_test() ->
-    TestResultNew = part2_new("test_input_day12.txt"),
+part2_test() ->
+    TestResultNew = part2("test_input_day12.txt"),
     ?debugFmt("TestResult: ~p", [TestResultNew]),
     ?assertEqual(29, TestResultNew),
 
-    Result = part2_new("input_day12.txt"),
+    Result = part2("input_day12.txt"),
     ?debugFmt("Result: ~p", [Result]),
     ?assertEqual(414, Result).
 
