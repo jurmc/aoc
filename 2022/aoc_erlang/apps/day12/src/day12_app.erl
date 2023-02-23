@@ -127,10 +127,7 @@ get_next_point(Unvisited) ->
 is_there_pass_between_points ({X1,Y1}, {X2,Y2}, M) ->
     H1 = height({X1,Y1}, M),
     H2 = height({X2,Y2},M),
-    H2 - H1 =< 1.
-
-is_there_pass_between_points_for_reversed_paths ({X1,Y1}, {X2,Y2}, M) ->
-    is_there_pass_between_points({X2,Y2}, {X1,Y1}, M).
+    H1 - H2 =< 1.
 
 neighbours_for_point({X,Y}, Unvisited, M) ->
     CartesianNeighbours = [{X+1,Y}, {X-1,Y}, {X,Y+1}, {X,Y-1}],
@@ -143,7 +140,7 @@ neighbours_for_point({X,Y}, Unvisited, M) ->
                                        end,
                                        WithinChartNeighbours),
     _ConnectedNeighbours = lists:filter(fun({NeighbourX,NeighbourY}) ->
-                                                is_there_pass_between_points_for_reversed_paths({X,Y}, {NeighbourX,NeighbourY}, M)
+                                                is_there_pass_between_points({X,Y}, {NeighbourX,NeighbourY}, M)
                                         end,
                                         UnvisitedNeighbours).
 
