@@ -48,27 +48,6 @@ load_input(FileName) ->
                              LinesWithY),
     dict:from_list(CoordsList).
 
-find_fewest_steps(M) -> % TODO: to be deleted after evaluate_paths is fully implemented and tested
-    {StartX, StartY} = find($E, M),
-    {EndX, EndY} = find($S, M),
-    Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
-    Visited = dict:new(),
-    FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}),
-    dict:find({EndX,EndY}, FinalVisited).
-
-find_fewest_steps(Visited, Unvisited, M, Endpoint) -> % TODO: to be deleted after evaluate_paths is fully implemented and tested
-    case only_inf_in_unvisited(Unvisited) or endpoint_in_visited(Endpoint, Visited) of
-        true ->
-            Visited;
-        _ -> case dict:size(Unvisited) of
-                 0 -> Visited;
-                 _ ->
-                     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
-                     %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
-                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
-             end
-    end.
-
 evaluate_paths(M) ->
     {StartX, StartY} = find($E, M),
     {EndX, EndY} = find($S, M),
@@ -133,9 +112,6 @@ only_inf_in_unvisited(Unvisited) ->
               end,
               dict:to_list(Unvisited)).
 
-endpoint_in_visited(Endpoint, Visited) -> % TODO: might not be used if evaluate_paths is fully implemented and tested
-    dict:is_key(Endpoint, Visited).
-
 process_point(Visited, Unvisited, M) ->
     {X,Y} = get_next_point(Unvisited),
     Neighbours = neighbours_for_point({X,Y}, Unvisited, M),
@@ -172,7 +148,7 @@ is_there_pass_between_points ({X1,Y1}, {X2,Y2}, M) ->
     H2 = height({X2,Y2},M),
     H2 - H1 =< 1.
 
-is_there_pass_between_points_for_reversed_paths ({X1,Y1}, {X2,Y2}, M) -> %%% TODO: not yest used in resolutions
+is_there_pass_between_points_for_reversed_paths ({X1,Y1}, {X2,Y2}, M) ->
     is_there_pass_between_points({X2,Y2}, {X1,Y1}, M).
 
 neighbours_for_point({X,Y}, Unvisited, M) ->
@@ -248,9 +224,11 @@ get_next_point_test() ->
     {NextX, NextY} = get_next_point(Unvisited),
     ?assertEqual({7,3}, {NextX, NextY}).
 
-find_fewest_steps_test() ->
+evaluate_paths_test() ->
     M = load_input("test_input_day12.txt"),
-    ?assertEqual({ok, 31}, find_fewest_steps(M)).
+    EvaluatedPaths = evaluate_paths(M),
+    ShortestPathBetweenEndpoints = dict:fetch(find($S, M), EvaluatedPaths),
+    ?assertEqual(31, ShortestPathBetweenEndpoints).
 
 get_all_for_level_test() ->
     M = load_input("test_input_day12.txt"),
