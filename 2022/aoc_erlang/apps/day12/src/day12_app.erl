@@ -50,8 +50,8 @@ load_input(FileName) ->
     dict:from_list(CoordsList).
 
 find_fewest_steps(M) ->
-    {StartX, StartY} = find($S, M),
-    {EndX, EndY} = find($E, M),
+    {StartX, StartY} = find($E, M),
+    {EndX, EndY} = find($S, M),
     Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
     Visited = dict:new(),
     FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}),
@@ -167,10 +167,9 @@ neighbours_for_point({X,Y}, Unvisited, M) ->
                                        end,
                                        WithinChartNeighbours),
     _ConnectedNeighbours = lists:filter(fun({NeighbourX,NeighbourY}) ->
-                                                is_there_pass_between_points({X,Y}, {NeighbourX,NeighbourY}, M)
+                                                is_there_pass_between_points_for_reversed_paths({X,Y}, {NeighbourX,NeighbourY}, M)
                                         end,
                                         UnvisitedNeighbours).
-
 
 %%% Unit tests
 %%-ifdef(TEST).
@@ -190,15 +189,14 @@ neighbours_for_point_test() ->
     ExpectedNeighbours1 = sets:from_list([{2,1}, {1,2}]),
     ?assertEqual(ExpectedNeighbours1, sets:from_list(neighbours_for_point({1,1}, Unvisited, M))),
 
-    ExpectedNeighbours2 = sets:from_list([{5,3}, {7,3}, {6,2}, {6,4}]),
+    ExpectedNeighbours2 = sets:from_list([{5,3}]),
     ?assertEqual(ExpectedNeighbours2, sets:from_list(neighbours_for_point({6,3}, Unvisited, M))),
 
-    ExpectedNeighbours3 = sets:from_list([{1,5}, {2,4}]),
+    ExpectedNeighbours3 = sets:from_list([{1,5}, {3,5}, {2,4}]),
     ?assertEqual(ExpectedNeighbours3, sets:from_list(neighbours_for_point({2,5}, Unvisited, M))),
 
-    UnvisitedWithoutTopLevl = dict:erase({1,1}, Unvisited),
-    ExpectedNeighbours4 = sets:from_list([{1,3}, {2,2}]),
-    ?assertEqual(ExpectedNeighbours4, sets:from_list(neighbours_for_point({1,2}, UnvisitedWithoutTopLevl, M))).
+    ExpectedNeighbours4 = sets:from_list([{4,1}, {5,2}, {4,3}]),
+    ?assertEqual(ExpectedNeighbours4, sets:from_list(neighbours_for_point({4,2}, Unvisited, M))).
 
 init_unvisited_test() ->
     M = load_input("test_input_day12.txt"),
@@ -210,14 +208,15 @@ init_unvisited_test() ->
 
 process_point_test() ->
     M = load_input("test_input_day12.txt"),
-    Unvisited = dict:store({2,5}, 5, init_unvisited(M)),
+    Unvisited = dict:store({4,2}, 5, init_unvisited(M)),
     Visited = dict:new(),
-    ExepectedNewVisited = dict:from_list([{{2,5},5}]),
+    ExepectedNewVisited = dict:from_list([{{4,2},5}]),
 
-    ExpUnvisitedPrep1 = dict:erase({2,5}, Unvisited),
-    ExpUnvisitedPrep2 = dict:store({1,5}, 6, ExpUnvisitedPrep1),
-    ExpUnvisitedPrep3 = dict:store({2,4}, 6, ExpUnvisitedPrep2),
-    ExepectedNewUnvisited = ExpUnvisitedPrep3,
+    ExpUnvisitedPrep1 = dict:erase({4,2}, Unvisited),
+    ExpUnvisitedPrep2 = dict:store({4,1}, 6, ExpUnvisitedPrep1),
+    ExpUnvisitedPrep3 = dict:store({5,2}, 6, ExpUnvisitedPrep2),
+    ExpUnvisitedPrep4 = dict:store({4,3}, 6, ExpUnvisitedPrep3),
+    ExepectedNewUnvisited = ExpUnvisitedPrep4,
 
     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
     ?assertEqual(ExepectedNewVisited, NewVisited),
