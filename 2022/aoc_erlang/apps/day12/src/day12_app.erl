@@ -12,6 +12,15 @@ part1(FileName) ->
     M = load_input(FileName),
     find_fewest_steps(M).
 
+part1_new(FileName) ->
+    M = load_input(FileName),
+    Visited = evaluate_paths(M), % TODO: pass StartPoint to evaluate_paths, EndPoint is probably not needed at all since we'd like to evaluate all point with regard to shortest path
+
+    ?debugFmt("Visited: ~p~n", [dict:to_list(Visited)]),
+
+    {EndX, EndY} = find($S, M),
+    dict:find({EndX,EndY}, Visited).
+
 part2(FileName) ->
     M = load_input(FileName),
     AllLowest = get_all_for_height($a, M),
@@ -35,6 +44,23 @@ part2(FileName) ->
                                AllLowest),
     Result.
 
+part2_new(FileName) ->
+    M = load_input(FileName),
+    AllLowest = get_all_for_height($a, M),
+    Size = dict:size(AllLowest),
+    Visited = evaluate_paths(M),
+    VisitedFilteredList = lists:filter(fun({{X,Y}, _Val}) ->
+                                               dict:is_key({X,Y}, AllLowest)
+                                       end,
+                                       dict:to_list(Visited)),
+    SortedVisited = lists:sort(fun({_Key1, Val1}, {_Key2, Val2}) ->
+                                       Val1 =< Val2
+                               end,
+                               VisitedFilteredList),
+    ?debugFmt("SortedVisited: ~p", [SortedVisited]),
+    {_, Result} = hd(SortedVisited),
+    Result.
+
 %%% Internal functions
 
 load_input(FileName) ->
@@ -49,13 +75,46 @@ load_input(FileName) ->
                              LinesWithY),
     dict:from_list(CoordsList).
 
-find_fewest_steps(M) ->
+find_fewest_steps(M) -> % TODO: to be deleted after evaluate_paths is fully implemented and tested
     {StartX, StartY} = find($E, M),
     {EndX, EndY} = find($S, M),
     Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
     Visited = dict:new(),
     FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}),
     dict:find({EndX,EndY}, FinalVisited).
+
+find_fewest_steps(Visited, Unvisited, M, Endpoint) -> % TODO: to be deleted after evaluate_paths is fully implemented and tested
+    case only_inf_in_unvisited(Unvisited) or endpoint_in_visited(Endpoint, Visited) of
+        true ->
+            Visited;
+        _ -> case dict:size(Unvisited) of
+                 0 -> Visited;
+                 _ ->
+                     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
+                     %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
+                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
+             end
+    end.
+
+evaluate_paths(M) ->
+    {StartX, StartY} = find($E, M),
+    {EndX, EndY} = find($S, M),
+    Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
+    Visited = dict:new(),
+    FinalVisited = find_fewest_steps(Visited, Unvisited, M, {EndX, EndY}).
+
+evaluate_paths(Visited, Unvisited, M, Endpoint) ->
+    case only_inf_in_unvisited(Unvisited) of
+        true ->
+            Visited;
+        _ -> case dict:size(Unvisited) of
+                 0 -> Visited;
+                 _ ->
+                     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
+                     %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
+                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
+             end
+    end.
 
 get_all_for_height(Height, M) ->
     dict:filter(fun({X,Y}, _) ->
@@ -88,19 +147,6 @@ init_unvisited(M) ->
               dict:new(),
               M).
 
-find_fewest_steps(Visited, Unvisited, M, Endpoint) ->
-    case only_inf_in_unvisited(Unvisited) or endpoint_in_visited(Endpoint, Visited) of
-        true ->
-            Visited;
-        _ -> case dict:size(Unvisited) of
-                 0 -> Visited;
-                 _ ->
-                     {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
-                     %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
-                     find_fewest_steps(NewVisited, NewUnvisited, M, Endpoint)
-             end
-    end.
-
 height({X,Y}, M) ->
     case dict:fetch({X,Y}, M) of
         $S -> $a;
@@ -114,7 +160,7 @@ only_inf_in_unvisited(Unvisited) ->
               end,
               dict:to_list(Unvisited)).
 
-endpoint_in_visited(Endpoint, Visited) ->
+endpoint_in_visited(Endpoint, Visited) -> % TODO: might not be used if evaluate_paths is fully implemented and tested
     dict:is_key(Endpoint, Visited).
 
 process_point(Visited, Unvisited, M) ->
@@ -233,6 +279,12 @@ find_fewest_steps_test() ->
     M = load_input("test_input_day12.txt"),
     ?assertEqual({ok, 31}, find_fewest_steps(M)).
 
+get_all_for_level_test() ->
+    M = load_input("test_input_day12.txt"),
+    AllLowest = get_all_for_height($a, M),
+    ?assertEqual(6, dict:size(AllLowest)).
+
+
 part1_test() ->
     TestResult = part1("test_input_day12.txt"),
     ?debugFmt("Part1 result: ~p", [TestResult]),
@@ -242,11 +294,14 @@ part1_test() ->
     ?debugFmt("Part1 result: ~p", [Result]),
     ?assertEqual({ok,420}, Result).
 
-get_all_for_level_test() ->
-    M = load_input("test_input_day12.txt"),
-    AllLowest = get_all_for_height($a, M),
-    ?assertEqual(6, dict:size(AllLowest)).
+part1_new_test() ->
+    TestResult = part1_new("test_input_day12.txt"),
+    ?debugFmt("Part1 result: ~p", [TestResult]),
+    ?assertEqual({ok,31}, TestResult),
 
+    Result = part1_new("input_day12.txt"),
+    ?debugFmt("Part1 result: ~p", [Result]),
+    ?assertEqual({ok,420}, Result).
 
 part2_test_() ->
     %% TODO: this is very not optimal
@@ -261,5 +316,14 @@ part2_test_() ->
                              ?debugFmt("Result: ~p", [Result]),
                              ?assertEqual(414, Result)
                          end)}.
+
+part2_new_test() ->
+    TestResultNew = part2_new("test_input_day12.txt"),
+    ?debugFmt("TestResult: ~p", [TestResultNew]),
+    ?assertEqual(29, TestResultNew),
+
+    Result = part2_new("input_day12.txt"),
+    ?debugFmt("Result: ~p", [Result]),
+    ?assertEqual(414, Result).
 
 -endif.
