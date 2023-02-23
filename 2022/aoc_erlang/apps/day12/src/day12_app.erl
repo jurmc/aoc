@@ -4,23 +4,15 @@
 
 %%% Exported functions
 
-%%% Unit tests
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
 part1(FileName) ->
     M = load_input(FileName),
-    Visited = evaluate_paths(M), % TODO: pass StartPoint to evaluate_paths, EndPoint is probably not needed at all since we'd like to evaluate all point with regard to shortest path
-
-    ?debugFmt("Visited: ~p~n", [dict:to_list(Visited)]),
-
+    Visited = evaluate_paths(M),
     {EndX, EndY} = find($S, M),
     dict:find({EndX,EndY}, Visited).
 
 part2(FileName) ->
     M = load_input(FileName),
     AllLowest = get_all_for_height($a, M),
-    Size = dict:size(AllLowest),
     Visited = evaluate_paths(M),
     VisitedFilteredList = lists:filter(fun({{X,Y}, _Val}) ->
                                                dict:is_key({X,Y}, AllLowest)
@@ -30,7 +22,6 @@ part2(FileName) ->
                                        Val1 =< Val2
                                end,
                                VisitedFilteredList),
-    ?debugFmt("SortedVisited: ~p", [SortedVisited]),
     {_, Result} = hd(SortedVisited),
     Result.
 
@@ -49,13 +40,12 @@ load_input(FileName) ->
     dict:from_list(CoordsList).
 
 evaluate_paths(M) ->
-    {StartX, StartY} = find($E, M),
-    {EndX, EndY} = find($S, M),
-    Unvisited = dict:store({StartX,StartY}, 0, init_unvisited(M)),
+    {EndX, EndY} = find($E, M),
+    Unvisited = dict:store({EndX,EndY}, 0, init_unvisited(M)),
     Visited = dict:new(),
-    FinalVisited = evaluate_paths(Visited, Unvisited, M, {EndX, EndY}).
+    evaluate_paths(Visited, Unvisited, M).
 
-evaluate_paths(Visited, Unvisited, M, Endpoint) ->
+evaluate_paths(Visited, Unvisited, M) ->
     case only_inf_in_unvisited(Unvisited) of
         true ->
             Visited;
@@ -64,7 +54,7 @@ evaluate_paths(Visited, Unvisited, M, Endpoint) ->
                  _ ->
                      {NewVisited, NewUnvisited} = process_point(Visited, Unvisited, M),
                      %%?debugFmt("NewVisited: ~p", [dict:to_list(NewVisited)]),
-                     evaluate_paths(NewVisited, NewUnvisited, M, Endpoint)
+                     evaluate_paths(NewVisited, NewUnvisited, M)
              end
     end.
 
@@ -74,15 +64,6 @@ get_all_for_height(Height, M) ->
                         ThisPointHeight =:= Height
                 end,
                 M).
-
-replace_start({X,Y}, M) ->
-    {OldStartX, OldStartY} = find($S, M),
-    M2 = dict:store({OldStartX, OldStartY}, $a, M),
-    %%?debugFmt("{OldStartX, OldStartY}: {~p,~p}", [OldStartX,OldStartY]),
-    %%?debugFmt("{NewStartX, NewStartY}: {~p,~p}", [X,Y]),
-    Result = dict:store({X,Y}, $S, M2),
-    %%?debugFmt("Result: ~p", [dict:to_list(Result)]),
-    Result.
 
 find(Symbol, M) ->
     Filtered = dict:filter(fun(_Key, Val) ->
@@ -167,8 +148,9 @@ neighbours_for_point({X,Y}, Unvisited, M) ->
                                         UnvisitedNeighbours).
 
 %%% Unit tests
-%%-ifdef(TEST).
-%%-include_lib("eunit/include/eunit.hrl").
+%%%
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 load_input_test() ->
     TestM = load_input("test_input_day12.txt"),
@@ -196,7 +178,7 @@ neighbours_for_point_test() ->
 init_unvisited_test() ->
     M = load_input("test_input_day12.txt"),
     InitDist = init_unvisited(M),
-    dict:map(fun(Key, Value) ->
+    dict:map(fun(_Key, Value) ->
                      ?assertEqual(inf, Value)
              end,
              InitDist).
@@ -219,7 +201,6 @@ process_point_test() ->
 
 get_next_point_test() ->
     M = load_input("test_input_day12.txt"),
-    UnvisitedPrep = dict:store({3,2}, 5, init_unvisited(M)),
     Unvisited = dict:store({7,3}, 3, init_unvisited(M)),
     {NextX, NextY} = get_next_point(Unvisited),
     ?assertEqual({7,3}, {NextX, NextY}).
@@ -234,7 +215,6 @@ get_all_for_level_test() ->
     M = load_input("test_input_day12.txt"),
     AllLowest = get_all_for_height($a, M),
     ?assertEqual(6, dict:size(AllLowest)).
-
 
 part1_test() ->
     TestResult = part1("test_input_day12.txt"),
