@@ -2,6 +2,7 @@
 
     . env.sh
     rebar3 eunit
+    rebar3 eunit -m day14_app
 
 # TODO:
 
