@@ -260,7 +260,6 @@ part1_test_() ->
              ?debugFmt("Part1 test result: ~p~n", [TestResult]),
              ?assertEqual(24, TestResult),
 
-             %% TODO: optimize this part
              Result = part1("input_day14.txt"),
              ?debugFmt("Part1 result: ~p~n", [Result]),
              ?assertEqual(1133, Result),
@@ -291,7 +290,7 @@ part2_test_() ->
              ?debugFmt("Part2 test result: ~p~n", [TestResult]),
              ?assertEqual(93, TestResult),
 
-             %%%%% TODO: optimize this part
+             %%%%% TODO: optimize this part this last 25 minutes on t520i!
              %%Result = part2("input_day14.txt"),
              %%?debugFmt("Part2 result: ~p~n", [Result]),
              %%?assertEqual(1, Result),
