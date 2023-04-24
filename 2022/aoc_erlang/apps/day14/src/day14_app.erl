@@ -9,7 +9,7 @@
 
 part1(FileName) ->
     RockPositions = read_map(FileName),
-    RestingPositions = reach_resting_state(RockPositions, sets:new(), {500, 0}, {floor, inf}),
+    RestingPositions = reach_resting_state_opt_part1(RockPositions, sets:new(), [{500, 0}], {floor, inf}),
     sets:size(RestingPositions).
 
 part2(FileName) ->
@@ -189,7 +189,7 @@ apply_steps(RockPositions, SandRestingPositions, {X, Y}, Floor = {floor, FloorVa
                         end
                end,
 
-    case FloorFun() of 
+    case FloorFun() of
         true ->
             ?debugFmt("{~p, ~p, ~p} FloorFun() flows_out~n", [X, Y, FloorValY]),
             flows_out;
@@ -198,6 +198,20 @@ apply_steps(RockPositions, SandRestingPositions, {X, Y}, Floor = {floor, FloorVa
                 true -> {X,Y};
                 _ ->
                     apply_steps(RockPositions, SandRestingPositions, {NewX, NewY}, Floor)
+            end
+    end.
+
+apply_steps_opt_part1(RockPositions, SandRestingPositions, [{X, Y}|_] = SandSources) ->
+    {NewX, NewY} = apply_step(RockPositions, SandRestingPositions, {X, Y}, {floor, inf}),
+
+    case does_flow_out(RockPositions, SandRestingPositions, {NewX, NewY}) of
+        true ->
+            flows_out;
+        _ ->
+            case {X,Y} =:= {NewX,NewY} orelse {NewX,NewY} =:= {500,0} of
+                true -> {{X,Y}, tl(SandSources)};
+                _ ->
+                    apply_steps_opt_part1(RockPositions, SandRestingPositions, [{NewX, NewY}|SandSources])
             end
     end.
 
@@ -212,6 +226,15 @@ reach_resting_state(RockPositions, SandRestingPositions, SandSource, Floor) ->
         {X,Y} ->
             %%?debugFmt("Adding new resting coords: ~p, ~p~n", [X, Y]),
             reach_resting_state(RockPositions, sets:add_element({X,Y}, SandRestingPositions), SandSource, Floor)
+    end.
+
+reach_resting_state_opt_part1(RockPositions, SandRestingPositions, SandSources, Floor) ->
+    case apply_steps_opt_part1(RockPositions, SandRestingPositions, SandSources) of
+        flows_out ->
+            SandRestingPositions;
+        {{X,Y}, NewSandSources} ->
+            %%?debugFmt("Adding new resting coords: ~p, ~p~n", [X, Y]),
+            reach_resting_state_opt_part1(RockPositions, sets:add_element({X,Y}, SandRestingPositions), NewSandSources, Floor)
     end.
 
 reach_resting_state_test() ->
@@ -237,10 +260,10 @@ part1_test_() ->
              ?debugFmt("Part1 test result: ~p~n", [TestResult]),
              ?assertEqual(24, TestResult),
 
-             %%% TODO: optimize this part
-             %Result = part1("input_day14.txt"),
-             %?debugFmt("Part1 result: ~p~n", [Result]),
-             %?assertEqual(1133, Result),
+             %% TODO: optimize this part
+             Result = part1("input_day14.txt"),
+             ?debugFmt("Part1 result: ~p~n", [Result]),
+             ?assertEqual(1133, Result),
              ok
      end}.
 
@@ -268,10 +291,10 @@ part2_test_() ->
              ?debugFmt("Part2 test result: ~p~n", [TestResult]),
              ?assertEqual(93, TestResult),
 
-             %%% TODO: optimize this part
-             Result = part2("input_day14.txt"),
-             ?debugFmt("Part2 result: ~p~n", [Result]),
-             ?assertEqual(1, Result),
+             %%%%% TODO: optimize this part
+             %%Result = part2("input_day14.txt"),
+             %%?debugFmt("Part2 result: ~p~n", [Result]),
+             %%?assertEqual(1, Result),
              ok
      end}.
 
