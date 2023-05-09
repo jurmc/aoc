@@ -5,6 +5,9 @@
 
 -export([part1/1, part2/1]).
 
+%%% TODO: use it in all places where at the moment we have {500,0} or {500, 0}
+-define(SAND_SOURCE, {500, 0}).
+
 %%% Exported functions
 
 part1(FileName) ->
@@ -14,10 +17,10 @@ part1(FileName) ->
 
 part2(FileName) ->
     RockPositions = read_map(FileName),
-    FloorValY = get_floor(RockPositions),
-    RestingPositions = reach_resting_state(RockPositions, sets:new(), {500, 0}, {floor, FloorValY}),
-    ?debugFmt("FloorValY: ~p~nRestingPositions: ~p", [FloorValY, lists:sort(sets:to_list(RestingPositions))]),
-    1 + sets:size(RestingPositions). %%% 1 is SandSource
+    MaxY = 1 + lists:max([Y || {_X,Y} <- sets:to_list(RockPositions)]),
+    Unvisited = generate_unvisited(?SAND_SOURCE, MaxY, RockPositions),
+    Visited = process_unvisited([], Unvisited),
+    length(Visited).
 
 %%% Internal functions
 
@@ -61,6 +64,10 @@ map_from_record([Record|RestRecords], AccSet) ->
 
 map_from_records(Records) ->
     map_from_record(Records, sets:new()).
+
+%%%
+%%% Unit tests
+%%%
 
 read_map_test() ->
     ExpectedMap = sets:from_list([
@@ -139,42 +146,6 @@ reaches_floor_test() ->
     ?assertEqual(false, reaches_floor({503, 5}, FloorValY)),
     ?assertEqual(true, reaches_floor({503, 10}, FloorValY)).
 
-%%%
-%%%     4  4  5  5
-%%%     9  9  0  0
-%%%     4  7  0  3
-%%%  0  ......+...
-%%%  1  ..........
-%%%  2  ..........
-%%%  3  ..........
-%%%  4  ....#...##
-%%%  5  ....#...#.
-%%%  6  ..###...#.
-%%%  7  ........#.
-%%%  8  ........#.
-%%%  9  #########.
-%%% 10  ..........
-%%% 11  ##########
-
-%%%    4  4  5  5
-%%%    9  9  0  0
-%%%    4  7  0  3
-%%% 0 .......+...
-%%% 1 .......~...
-%%% 2 ......~o... {},
-%%% 3 .....~ooo.. {499,3},{500,3},{501,3},
-%%% 4 ....~#ooo## {499,4},{500,4},{501,4},
-%%% 5 ...~o#ooo#. {497,5},{499,5},{500,5},{501,5},
-%%% 6 ..~###ooo#. {499,6},{500,6},{501,6},
-%%% 7 ..~..oooo#. {498,7},{499,7},{500,7},{501,7},
-%%% 8 .~o.ooooo#. {495,8},{497,8},{498,8},{499,8},{500,8},{501,8},
-%%% 9 ~#########.
-%%%   ~..........
-%%%   ~..........
-%%%   ~..........
-%%%
-%%%
-
 %%% TODO: END: Use test setups for readint input for below 3,4 tests
 
 apply_steps(RockPositions, SandRestingPositions, {X, Y}, Floor = {floor, FloorValY}) ->
@@ -191,7 +162,6 @@ apply_steps(RockPositions, SandRestingPositions, {X, Y}, Floor = {floor, FloorVa
 
     case FloorFun() of
         true ->
-            ?debugFmt("{~p, ~p, ~p} FloorFun() flows_out~n", [X, Y, FloorValY]),
             flows_out;
         _ ->
             case {X,Y} =:= {NewX,NewY} orelse {NewX,NewY} =:= {500,0} of
@@ -283,6 +253,88 @@ get_floor_test() ->
     FloorY = get_floor(RockPositions),
     ?assertEqual(11, FloorY).
 
+%%% Part2: optimization
+
+generate_unvisited({SourceX,SourceY}, MaxY, RockPositions) when SourceY < MaxY->
+    Spine = [{SourceX, Y} || Y <- lists:seq(SourceY, MaxY)],
+    Ribs = lists:foldl(fun({{CenterX, Y}, Length}, RibsSoFar) ->
+                        Edge = Length div 2,
+                        MinX = CenterX - Edge,
+                        MaxX = CenterX + Edge,
+                        NewRib = sets:from_list([{X, Y} || X <- lists:seq(MinX, MaxX)]),
+                        sets:union(RibsSoFar, NewRib)
+                end,
+                sets:new(),
+                lists:zip(Spine, lists:seq(1,2*length(Spine), 2))
+               ),
+    Set = sets:subtract(Ribs, RockPositions),
+    MapWithoutSourceSetTo0 = maps:from_list([{Coords, inf} || Coords <- sets:to_list(Set)]),
+    maps:update({SourceX,SourceY}, 0, MapWithoutSourceSetTo0).
+
+generate_unvisited_test() ->
+    RockPositions = sets:from_list([{499,1}, {499,2}, {500,2}, {499,3}]),
+    Unvisited = generate_unvisited(?SAND_SOURCE, 3, RockPositions),
+    ExpectedUnvisitedWithoutSandSource = maps:from_list([{Coords,inf} || Coords <-
+                                                                         [{500,0},
+                                                                          {500,1}, {501,1},
+                                                                          {498,2}, {501,2}, {502,2},
+                                                                          {497,3}, {498,3}, {500,3}, {501,3}, {502,3}, {503,3}]]),
+    ExpectedUnvisited = maps:update({500,0}, 0, ExpectedUnvisitedWithoutSandSource),
+    ?assertEqual(ExpectedUnvisited, Unvisited).
+
+
+%%% TODO: .............
+is_neighbour({X,Y1}, {X,Y2}) when Y1 + 1 =:= Y2 -> true;
+is_neighbour({X1,Y1}, {X2,Y2}) when X1-1 =:= X2 andalso Y1 + 1 =:= Y2 -> true;
+is_neighbour({X1,Y1}, {X2,Y2}) when X1+1 =:= X2 andalso Y1 + 1 =:= Y2 -> true;
+is_neighbour({_,_}, {_,_}) -> false.
+
+neighbours({X,Y}, Map) ->
+    maps:filter(fun({Ux, Uy}, _) -> is_neighbour({X,Y}, {Ux,Uy}) end, Map).
+
+neighbours_test() ->
+    Coords = maps:from_list([{{1,1},inf},{{2,1},inf},{{3,1},inf},
+                             {{1,2},inf},{{2,2},inf},{{3,2},inf},
+                             {{1,3},inf},{{2,3},inf},{{3,3},inf}]),
+    ExpectedNeighbours = maps:from_list([{{1,3},inf},{{2,3},inf},{{3,3},inf}]),
+    ?assertEqual(ExpectedNeighbours, neighbours({2,2}, Coords)).
+
+process_unvisited_step(VisitedList, UnvisitedMap) ->
+    NodesWithTentativeVal = maps:to_list(maps:filter(fun(_, Val) -> Val =/= inf end, UnvisitedMap)),
+    {Val, {X, Y}} = hd(lists:sort([{Val, Coords} || {Coords, Val} <- NodesWithTentativeVal])),
+    Neihgbours = neighbours({X, Y}, UnvisitedMap),
+    NewUnvisited = maps:fold(fun(Coords, _, AccMap) ->
+                                      maps:update(Coords, 1, AccMap)
+                              end,
+                              maps:remove({X,Y}, UnvisitedMap),
+                              Neihgbours),
+    NewVisited = [{X, Y}|VisitedList],
+    {NewVisited, NewUnvisited}.
+
+process_unvisited_step_test() ->
+    RockPositions = sets:from_list([{499,1}, {499,2}, {500,2}, {499,3}]),
+    Unvisited = generate_unvisited(?SAND_SOURCE, 3, RockPositions),
+    Visited = [],
+    {NewVisited, NewUnvisited} = process_unvisited_step(Visited, Unvisited),
+    ExpectedVisited = [?SAND_SOURCE],
+    ExpectedUnvisited = maps:update({500,1}, 1,
+                                    maps:update({501, 1}, 1,
+                                                maps:remove(?SAND_SOURCE, Unvisited))),
+    ?assertEqual(ExpectedVisited, NewVisited),
+    ?assertEqual(ExpectedUnvisited, NewUnvisited).
+
+process_unvisited(Visited, []) -> Visited;
+process_unvisited(Visited, Unvisited) ->
+    {NewVisited, NewUnvisited} = process_unvisited_step(Visited, Unvisited),
+    NonInf = maps:filter(fun(_Key, Val) ->
+                                 Val =/= inf 
+                          end,
+                          NewUnvisited),
+    case maps:size(NonInf) =:= 0 of
+        true -> NewVisited;
+        false -> process_unvisited(NewVisited, NewUnvisited)
+    end.
+
 part2_test_() ->
     {timeout, 3*60*60,
      fun() ->
@@ -290,16 +342,10 @@ part2_test_() ->
              ?debugFmt("Part2 test result: ~p~n", [TestResult]),
              ?assertEqual(93, TestResult),
 
-             %%%%% TODO: optimize this part this last 25 minutes on t520i!
-             %%Result = part2("input_day14.txt"),
-             %%?debugFmt("Part2 result: ~p~n", [Result]),
-             %%?assertEqual(1, Result),
+             Result = part2("input_day14.txt"),
+             ?debugFmt("Part2 result: ~p~n", [Result]),
+             ?assertEqual(27566, Result),
              ok
      end}.
 
-%%% Part2 work in progress
-
 -endif.
-%%%
-%%% Unit tests
-
