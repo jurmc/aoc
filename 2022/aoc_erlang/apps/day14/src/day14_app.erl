@@ -8,7 +8,7 @@
 
 part1(FileName) ->
     RockPositions = read_map(FileName),
-    RestingPositions = reach_resting_state_opt_part1(RockPositions, sets:new(), [?SAND_SOURCE], {floor, inf}),
+    RestingPositions = reach_resting_state(RockPositions, sets:new(), [?SAND_SOURCE], {floor, inf}),
     sets:size(RestingPositions).
 
 part2(FileName) ->
@@ -113,30 +113,7 @@ generate_unvisited({SourceX,SourceY}, MaxY, RockPositions) when SourceY < MaxY->
     MapWithoutSourceSetTo0 = maps:from_list([{Coords, inf} || Coords <- sets:to_list(Set)]),
     maps:update({SourceX,SourceY}, 0, MapWithoutSourceSetTo0).
 
-apply_steps(RockPositions, SandRestingPositions, {X, Y}, Floor = {floor, FloorValY}) ->
-    {NewX, NewY} = apply_step(RockPositions, SandRestingPositions, {X, Y}, Floor),
-
-    FloorFun = case FloorValY of
-                   inf -> fun() ->
-                                  does_flow_out(RockPositions, SandRestingPositions, {NewX, NewY})
-                          end;
-                   _ -> fun() ->
-                                {NewX,NewY} =:= ?SAND_SOURCE
-                        end
-               end,
-
-    case FloorFun() of
-        true ->
-            flows_out;
-        _ ->
-            case {X,Y} =:= {NewX,NewY} orelse {NewX,NewY} =:= ?SAND_SOURCE of
-                true -> {X,Y};
-                _ ->
-                    apply_steps(RockPositions, SandRestingPositions, {NewX, NewY}, Floor)
-            end
-    end.
-
-apply_steps_opt_part1(RockPositions, SandRestingPositions, [{X, Y}|_] = SandSources) ->
+apply_steps(RockPositions, SandRestingPositions, [{X, Y}|_] = SandSources) ->
     {NewX, NewY} = apply_step(RockPositions, SandRestingPositions, {X, Y}, {floor, inf}),
 
     case does_flow_out(RockPositions, SandRestingPositions, {NewX, NewY}) of
@@ -146,26 +123,16 @@ apply_steps_opt_part1(RockPositions, SandRestingPositions, [{X, Y}|_] = SandSour
             case {X,Y} =:= {NewX,NewY} orelse {NewX,NewY} =:= ?SAND_SOURCE of
                 true -> {{X,Y}, tl(SandSources)};
                 _ ->
-                    apply_steps_opt_part1(RockPositions, SandRestingPositions, [{NewX, NewY}|SandSources])
+                    apply_steps(RockPositions, SandRestingPositions, [{NewX, NewY}|SandSources])
             end
     end.
 
-reach_resting_state(RockPositions, SandRestingPositions, SandSource, Floor) ->
-    case apply_steps(RockPositions, SandRestingPositions, SandSource, Floor) of
-        flows_out ->
-            SandRestingPositions;
-        {X,Y} ->
-            %%?debugFmt("Adding new resting coords: ~p, ~p~n", [X, Y]),
-            reach_resting_state(RockPositions, sets:add_element({X,Y}, SandRestingPositions), SandSource, Floor)
-    end.
-
-reach_resting_state_opt_part1(RockPositions, SandRestingPositions, SandSources, Floor) ->
-    case apply_steps_opt_part1(RockPositions, SandRestingPositions, SandSources) of
+reach_resting_state(RockPositions, SandRestingPositions, SandSources, Floor) ->
+    case apply_steps(RockPositions, SandRestingPositions, SandSources) of
         flows_out ->
             SandRestingPositions;
         {{X,Y}, NewSandSources} ->
-            %%?debugFmt("Adding new resting coords: ~p, ~p~n", [X, Y]),
-            reach_resting_state_opt_part1(RockPositions, sets:add_element({X,Y}, SandRestingPositions), NewSandSources, Floor)
+            reach_resting_state(RockPositions, sets:add_element({X,Y}, SandRestingPositions), NewSandSources, Floor)
     end.
 
 get_floor(RockPositions) ->
@@ -225,7 +192,7 @@ read_map_test() ->
     ReadMap = read_map("test_input_day14.txt"),
     ?assertEqual(lists:sort(sets:to_list(ExpectedMap)), lists:sort(sets:to_list(ReadMap))).
 
-%%% TODO: BEGIN: Use test setups for readint input for below 3,4 tests
+%%% TODO: BEGIN: Use test setups for reading input for below 3,4 tests
 step_down_test() ->
     RockPositions = read_map("test_input_day14.txt"),
     SandRestingPositions = sets:new(),
@@ -251,56 +218,17 @@ flows_out_test() ->
     ?assertEqual(false, does_flow_out(RockPositions, sets:new(), {500, 1})),
     ?assertEqual(false, does_flow_out(RockPositions, sets:from_list([{508, 8}, {499,8}, {501,8}, {500,7}]), {498, 8})),
     ?assertEqual(true, does_flow_out(RockPositions, sets:new(), {503, 5})).
+%%% TODO: END: Use test setups for readint input for below 3,4 tests
 
 reaches_floor_test() ->
-    RockPositions = read_map("test_input_day14.txt"),
     FloorValY = 11,
     ?assertEqual(false, reaches_floor({503, 5}, FloorValY)),
     ?assertEqual(true, reaches_floor({503, 10}, FloorValY)).
-
-%%% TODO: END: Use test setups for readint input for below 3,4 tests
-
-apply_steps_test() ->
-    RockPositions = read_map("test_input_day14.txt"),
-    ?assertEqual({500,8}, apply_steps(RockPositions, sets:new(), ?SAND_SOURCE, {floor, inf})).
-
-reach_resting_state_test() ->
-    RockPositions = read_map("test_input_day14.txt"),
-    ExpectedRestingPositions = sets:from_list([{500,2},
-                                               {499,3},{500,3},{501,3},
-                                               {499,4},{500,4},{501,4},
-                                               {497,5},{499,5},{500,5},{501,5},
-                                               {499,6},{500,6},{501,6},
-                                               {498,7},{499,7},{500,7},{501,7},
-                                               {495,8},{497,8},{498,8},{499,8},{500,8},{501,8}]),
-    RestingPositions = reach_resting_state(RockPositions, sets:new(), ?SAND_SOURCE, {floor, inf}),
-
-    SortedExpected = lists:sort(sets:to_list(ExpectedRestingPositions)),
-    SortedEvaluated = lists:sort(sets:to_list(RestingPositions)),
-
-    ?assertEqual(lists:sort(sets:to_list(ExpectedRestingPositions)), lists:sort(sets:to_list(RestingPositions))).
-
-part1_test_() ->
-    {timeout, 15*60,
-     fun() ->
-             TestResult = part1("test_input_day14.txt"),
-             ?debugFmt("Part1 test result: ~p~n", [TestResult]),
-             ?assertEqual(24, TestResult),
-
-             Result = part1("input_day14.txt"),
-             ?debugFmt("Part1 result: ~p~n", [Result]),
-             ?assertEqual(1133, Result),
-             ok
-     end}.
-
-%%% Part2 work in progress
 
 get_floor_test() ->
     RockPositions = read_map("test_input_day14.txt"),
     FloorY = get_floor(RockPositions),
     ?assertEqual(11, FloorY).
-
-%%% Part2: optimization
 
 generate_unvisited_test() ->
     RockPositions = sets:from_list([{499,1}, {499,2}, {500,2}, {499,3}]),
@@ -314,7 +242,6 @@ generate_unvisited_test() ->
     ?assertEqual(ExpectedUnvisited, Unvisited).
 
 
-%%% TODO: .............
 neighbours_test() ->
     Coords = maps:from_list([{{1,1},inf},{{2,1},inf},{{3,1},inf},
                              {{1,2},inf},{{2,2},inf},{{3,2},inf},
@@ -334,15 +261,24 @@ process_unvisited_step_test() ->
     ?assertEqual(ExpectedVisited, NewVisited),
     ?assertEqual(ExpectedUnvisited, NewUnvisited).
 
+part1_test_() ->
+    {timeout, 3*60,
+     fun() ->
+             TestResult = part1("test_input_day14.txt"),
+             ?assertEqual(24, TestResult),
+
+             Result = part1("input_day14.txt"),
+             ?assertEqual(1133, Result),
+             ok
+     end}.
+
 part2_test_() ->
-    {timeout, 3*60*60,
+    {timeout, 3*60,
      fun() ->
              TestResult = part2("test_input_day14.txt"),
-             ?debugFmt("Part2 test result: ~p~n", [TestResult]),
              ?assertEqual(93, TestResult),
 
              Result = part2("input_day14.txt"),
-             ?debugFmt("Part2 result: ~p~n", [Result]),
              ?assertEqual(27566, Result),
              ok
      end}.
