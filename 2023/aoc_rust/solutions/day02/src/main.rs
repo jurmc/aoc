@@ -30,9 +30,9 @@ fn main() {
     }).collect();
 
     let sum: u32 = data.iter().filter(|(game_id, game_dict)| {
-        if *(game_dict.get("red").unwrap()) > 12 {return false};
-        if *(game_dict.get("green").unwrap()) > 13 {return false};
-        if *(game_dict.get("blue").unwrap()) > 14 {return false};
+        if game_dict["red"] > 12 {return false};
+        if game_dict["green"] > 13 {return false};
+        if game_dict["blue"] > 14 {return false};
         true})
     .map(|(game_id, _game_dict)| { game_id })
     .sum();
