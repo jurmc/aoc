@@ -1,11 +1,13 @@
 use std::fs;
 
 fn main() {
-    //let input = fs::read_to_string("test_input_day03.txt").unwrap();
-    let input = fs::read_to_string("input_day03.txt").unwrap();
+    let input = fs::read_to_string("test_input_day03.txt").unwrap();
+    //let input = fs::read_to_string("input_day03.txt").unwrap();
     let input: Vec<_> = input.lines().collect();
+    let max_line = input.len()-1;
+    let max_idx = input[0].len()-1;
 
-    let out_vec = input.iter().enumerate().fold(
+    let part1_vec = input.iter().enumerate().fold(
         Vec::new(),
         |mut acc, (n, line)| {
             let numbers: Vec<_> = extract_numbers(0, *line);
@@ -13,8 +15,8 @@ fn main() {
             acc
         });
 
-    let sum: u32 = out_vec.iter().filter(|(idx, numbers)| {
-        println!("idx: {}, numbers: {:?}", idx, numbers);
+    let sum: u32 = part1_vec.iter().filter(|(idx, numbers)| {
+        //println!("idx: {}, numbers: {:?}", idx, numbers);
         let neighbours = get_neighbours(*idx, &input, numbers);
 
         let is_part = neighbours.find(|c| c != '.');
@@ -27,11 +29,48 @@ fn main() {
     }).map(|(idx, numbers)|{
         let (start_pos, len, value) = numbers;
         //println!("filtered: idx: {}, numbers: {:?}", idx, numbers);
-        println!("value: {}", value);
+        //println!("value: {}", value);
         value
     }).sum();
 
-    println!("sum: {}", sum);
+    println!("Part1 sum: {}", sum);
+
+    // Collect gears: Vec<(line,idx)>
+    let neighours: Vec<_>= input.iter().enumerate().fold(
+        Vec::new(),
+        |mut acc, (n, line)| {
+            let mut gears: Vec<_> = line.chars().enumerate()
+                .filter(|(idx, c)| *c == '*')
+                .map(|(idx, c)| ((n, idx), c)).collect();
+            acc.append(&mut gears);
+            acc
+        }).iter().map(|((line, idx), _)| {
+            // Get all neighours from (line, idx)
+            let line = *line as i32;
+            let idx = *idx as i32;
+            let neighbours: Vec<_> = vec![
+                (line -1, idx-1), (line -1, idx), (line -1, idx+1),
+                (line,    idx-1),                 (line,    idx+1),
+                (line +1, idx-1), (line +1, idx), (line +1, idx+1)]
+                    .into_iter().filter(|(x, y)| {
+                        if *x < 0 || *y < 0 || *x > max_line as i32 || *y > max_idx as i32 {
+                            false
+                        } else {
+                            true
+                        }
+                    }).collect();
+            neighbours
+        }).collect();
+
+        neighours.iter().for_each(|item| println!("item: {:?}", item));
+
+        // Find all number that has at least part within neighours area
+        let result = get_numbers(input, &neighours[0]);
+        result.iter().for_each(|item| println!("item: {:?}", item));
+}
+
+fn get_numbers(input: Vec<&str>, neighours: &Vec<(i32, i32)>) -> Vec<String> {
+    vec![String::from("abc"), String::from("def")]
 }
 
 fn get_neighbours(idx: usize, input: &Vec<&str>, numbers: &(usize, usize, u32)) -> String {
