@@ -1,0 +1,1 @@
+../../../aoc_input/test_input_day04.txt
