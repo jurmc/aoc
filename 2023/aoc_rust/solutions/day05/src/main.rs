@@ -1,22 +1,79 @@
 use std::fs;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::str::Lines;
 
 fn main() {
-    let input = fs::read_to_string("test_input_day05.txt").unwrap();
-    let lines = input.lines();
-    let (seeds, order, maps) = prepare_input(lines);
-    let test_result = solve1(&seeds, &order, &maps);
-    let input = fs::read_to_string("input_day05.txt").unwrap();
-    let lines = input.lines();
-    let (seeds, order, maps) = prepare_input(lines);
-    let result = solve1(&seeds, &order, &maps);
+    //let input = fs::read_to_string("test_input_day05.txt").unwrap();
+    //let lines = input.lines();
+    //let (seeds, order, maps) = prepare_input(lines);
+    //let test_result = solve1(&seeds, &order, &maps);
+     let input = fs::read_to_string("input_day05.txt").unwrap();
+     let lines = input.lines();
+     let (seeds, order, maps) = prepare_input(lines);
+    //let result = solve1(&seeds, &order, &maps);
 
-    println!("test result: {}", test_result);
-    println!("result: {}", result);
+    //println!("test result: {}", test_result);
+    //println!("result: {}", result);
+
+    ///////////////////////
+    //order.iter().for_each(|s| println!("order: {}", s));
+    //maps.iter().for_each(|entry| println!("maps: {:?}", entry));
+    let (order2, maps2) = prepare_maps_for_part2(order, maps);
+    //order2.iter().for_each(|s| println!("order2: {}", s));
+    //maps2.iter().for_each(|entry| println!("maps2: {:?}", entry));
+
+    let mut location = 0u64;
+
+    let result: Option<u64>;
+    loop {
+        //println!("location: {}", location);
+        let locations = vec![location];
+        let translation = translte(&locations, &order2, &maps2);
+
+        if in_range(translation, &seeds) {
+            result = Some(location);
+            break;
+        }
+        location += 1;
+    }
+    println!("result: {:?}", result.unwrap());
+
 }
 
-fn solve1(seeds: &Vec<u64>, order: &Vec<&str>, maps: &HashMap<&str, Vec<Vec<u64>>>) -> u64 {
+fn in_range(translation: u64, seeds: &Vec<u64>) -> bool {
+    let mut found_or_not: bool = false;
+
+    for chunk in seeds.chunks(2) {
+        let beg = chunk[0];
+        let end = beg + chunk[1];
+
+        if translation >= beg && translation < end {
+            found_or_not = true;
+            break;
+        }
+    }
+
+    found_or_not
+}
+
+fn prepare_maps_for_part2<'a>(in_order: Vec<&'a str>, in_maps: HashMap<&'a str, Vec<Vec<u64>>>) -> (Vec<&'a str>, HashMap<&'a str, Vec<Vec<u64>>>){
+    let out_order: Vec<_> = in_order.into_iter().rev().collect();
+
+    let out_maps = in_maps.into_iter().map(|(key, val)| {
+        let new_val = val.into_iter().map(|v| {
+            let item0 = v[0];
+            let item1 = v[1];
+            let item2 = v[2];
+            vec![item1, item0, item2]
+        }).collect();
+        (key, new_val)
+    }).collect();
+
+    (out_order, out_maps)
+}
+
+fn translte(seeds: &Vec<u64>, order: &Vec<&str>, maps: &HashMap<&str, Vec<Vec<u64>>>) -> u64 {
     let mut mapping_applied = seeds.clone();
     order.iter().for_each(|label| {
         let mapping_def = maps.get(label).unwrap();
