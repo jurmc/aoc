@@ -44,9 +44,6 @@ impl XmasIter2<'_> {
             (x-1, y-1), (x+1, y-1),
             (x-1, y+1), (x+1, y+1),
         ];
-        //print!("new: ");
-        //v.iter().for_each(|i| { print!(" {:?}, ", i); });
-        //println!();
         XmasIter2 {matrix, v, idx: 0}
     }
 }
@@ -77,7 +74,8 @@ fn main() {
         (1i8, 0i8), (-1i8, 0i8), (0i8, 1i8), (0i8, -1i8),
         (1i8, 1i8), (-1i8, -1i8), (-1i8, 1i8), (1i8, -1i8),
     ];
-    let xmas = vec![Some('X'), Some('M'), Some('A'), Some('S')];
+
+    let xmas= vec!['X', 'M', 'A', 'S'];
 
     let mut x_mas: HashSet<_>  = HashSet::new();
     x_mas.insert(vec!['A', 'M', 'M', 'S', 'S']);
@@ -92,16 +90,14 @@ fn main() {
 
         // Part 1
         all_dirs.iter().for_each(|dir| {
-            let mut it = XmasIter1::new((*x, *y), *dir, &matrix);
-            let v = vec![it.next(), it.next(), it.next(), it.next()];
+            let v: Vec<char> = XmasIter1::new((*x, *y), *dir, &matrix).take(4).collect();
             if v == xmas {
                 acc1 += 1;
             }
         });
 
         // Part 2
-        let it = XmasIter2::new((*x, *y), &matrix);
-        let v: Vec<char> = it.collect();
+        let v: Vec<char> = XmasIter2::new((*x, *y), &matrix).collect();
         if x_mas.contains(&v) {
             acc2 += 1;
         }
